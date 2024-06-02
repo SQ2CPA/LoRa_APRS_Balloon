@@ -1,0 +1,42 @@
+{
+    "callsign": "N0CALL-11",
+    "wifi": {
+        "autoAP": {
+            "password": "1234567890",
+            "powerOff": 10
+        },
+        "AP": []
+    },
+    "beacon": {
+        "comment": "LoRa APRS Balloon",
+        "interval": 1,
+        "overlay": "/",
+        "symbol": "O",
+        "path": "WIDE1*",
+        "sendViaAPRSIS": false,
+        "sendViaRF": true
+    },
+    "digi": {
+        "mode": 2
+    },
+    "lora": {
+        "txFreq": 434855000,
+        "rxFreq": 436050000,
+        "spreadingFactor": 9,
+        "signalBandwidth": 125000,
+        "codingRate4": 7,
+        "power": 20,
+        "txActive": true,
+        "rxActive": true
+    },
+    "ota": {
+        "username": "",
+        "password": ""
+    },
+    "other": {
+        "sendBatteryVoltage": false,
+        "externalVoltageMeasurement": false,
+        "externalVoltagePin": 34,
+        "lowPowerMode": false
+    }
+}

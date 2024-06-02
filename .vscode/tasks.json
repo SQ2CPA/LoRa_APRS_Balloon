@@ -1,0 +1,26 @@
+{
+    "tasks": [
+        {
+            "label": "Upload OTA",
+            "type": "shell",
+            "command": "python tools/ota.py ${input:env} ${input:host}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "env",
+            "description": "Please select environment",
+            "type": "pickString",
+            "options": [
+                "heltec_ht-ct62"
+            ],
+            "default": "heltec_ht-ct62"
+        },
+        {
+            "id": "host",
+            "description": "Please enter a host where upload firmware",
+            "default": "192.168.4.1",
+            "type": "promptString"
+        }
+    ]
+}

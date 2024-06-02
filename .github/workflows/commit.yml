@@ -1,0 +1,30 @@
+name: Commit Test Build
+
+on:
+    push:
+        branches:
+            - '*'
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                target:
+                    - "heltec_ht-ct62"
+        steps:
+            - uses: actions/checkout@v3
+
+            - uses: actions/setup-python@v4
+              with:
+                  python-version: "3.9"
+
+            - name: Install PlatformIO Core
+              run: pip install --upgrade platformio
+
+            - name: Build target
+              run: pio run -e ${{ matrix.target }}
+
+            - name: Build FS
+              run: pio run --target buildfs -e ${{ matrix.target }}
