@@ -15,12 +15,13 @@
 #include <HWCDC.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
+#include <SparkFun_Ublox_Arduino_Library.h>
 
 SoftwareSerial gpsPort(0, 1);
 TinyGPSPlus gps;
+SFE_UBLOX_GPS sgps;
 
 Configuration   Config;
-WiFiClient      espClient;
 
 uint8_t         myWiFiAPIndex         = 0;
 int             myWiFiAPSize          = Config.wifiAPs.size();
@@ -45,12 +46,14 @@ String          batteryVoltage;
 
 std::vector<ReceivedPacket> receivedPackets;
 
-String iGateBeaconPacket, iGateLoRaBeaconPacket;
+String beaconPacket;
+int beaconNum = 0;
+int beaconFrequency = 0;
 
 void setup() {
     Serial.begin(115200);
 
-    gpsPort.begin(115200);
+    gpsPort.begin(9600);
 
     #if defined(BATTERY_PIN)
     pinMode(BATTERY_PIN, INPUT);
@@ -66,23 +69,62 @@ void setup() {
     delay(1000);
 
     LoRa_Utils::setup();
-    Utils::validateFreqs();
 
-    iGateBeaconPacket = GPS_Utils::generateBeacon();
-    iGateLoRaBeaconPacket = GPS_Utils::generateiGateLoRaBeacon();
+    beaconPacket = GPS_Utils::generateBeacon(0, 0, 0, 0, 0);
 
-    WIFI_Utils::setup();
-    WEB_Utils::setup();
+    // WIFI_Utils::setup();
+    // WEB_Utils::setup();
+
+    Serial.print("Brownout: ");
+    Serial.print(CONFIG_ESP32C3_BROWNOUT_DET);
+    Serial.print(" ");
+    Serial.print(CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_7);
+    Serial.print(" ");
+    Serial.print(CONFIG_ESP32C3_BROWNOUT_DET_LVL);
+    Serial.print("\n");
+
+    unsigned long startedAt = millis();
+
+    // int d = 5000;
+    int d = 15000;
+
+    while (millis() - startedAt < d) {
+        while (gpsPort.available() > 0) {
+            byte b = gpsPort.read();
+
+            if (millis() - startedAt < 3000) {
+                Serial.write(b);
+            }
+            
+            gps.encode(b);
+        }
+
+        delay(250);
+    }
 }
 
 int rxPackets = 0;
+int gpsFails = 0;
 
 void loop() {
     while (gpsPort.available() > 0) {
-        gps.encode(gpsPort.read());
+        byte b = gpsPort.read();
+
+        // Serial.write(b);
+        gps.encode(b);
     }
 
-    Config.beacon.comment = "RX 436.050 @1k2 SKYY1-1 DIGI ";
+    if (gpsFails >= 10) {
+        sgps.begin(gpsPort);
+
+        sgps.factoryReset();
+
+        ESP.restart();
+    }
+
+    Config.beacon.comment = "P" + String(beaconNum);
+    Config.beacon.comment += "S" + String(gps.satellites.value());
+    Config.beacon.comment += " ";
 
     if (gps.altitude.isValid()) {
         Config.beacon.comment += String(int(gps.altitude.meters()))+"m ";
@@ -96,8 +138,6 @@ void loop() {
         Config.beacon.comment += "-kmh ";
     }
 
-    Config.beacon.comment += "S" + String(gps.satellites.value()) + " ";
-
     if (gps.altitude.isValid()) {
         Config.beacon.comment += "3D ";
     } else if (gps.location.isValid()) {
@@ -108,32 +148,43 @@ void loop() {
         }
     }
 
-    Config.beacon.comment += "RXs " + String(rxPackets);
+    Config.beacon.comment += "R" + String(rxPackets);
+
+    int knots = 0;
+    int course = 0;
+    int altitude = 0;
 
     if (gps.location.isValid()) {
         Config.beacon.latitude = gps.location.lat();
         Config.beacon.longitude = gps.location.lng();
+
+        knots = gps.speed.knots();
+        course = gps.course.deg();
+        altitude = gps.altitude.feet();
     } else {
         Config.beacon.latitude = 0;
         Config.beacon.longitude = 0;
     }
 
-    iGateBeaconPacket = GPS_Utils::generateBeacon();
-    iGateLoRaBeaconPacket = GPS_Utils::generateiGateLoRaBeacon();
+    beaconPacket = GPS_Utils::generateBeacon(Config.beacon.latitude, Config.beacon.longitude, knots, course, altitude);
 
-    WIFI_Utils::checkIfAutoAPShouldPowerOff();
+    // WIFI_Utils::checkIfAutoAPShouldPowerOff();
 
     if (isUpdatingOTA) {
         ElegantOTA.loop();
         return;
     }
 
-    #ifndef BALLOON
-    WIFI_Utils::checkWiFi(); // Always use WiFi, not related to IGate/Digi mode
+    // WIFI_Utils::checkWiFi(); // Always use WiFi, not related to IGate/Digi mode
     // Utils::checkWiFiInterval();
-    #endif
 
-    Utils::checkBeaconInterval();
+    if (Utils::checkBeaconInterval()) {
+        if (!gps.location.isValid()) {
+            gpsFails++;
+        } else {
+            gpsFails = 0;
+        }
+    }
 
     String packet = "";
     if (Config.loramodule.rxActive) {

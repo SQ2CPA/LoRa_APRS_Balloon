@@ -8,7 +8,6 @@
 #include "utils.h"
 
 extern Configuration    Config;
-extern String           iGateBeaconPacket;
 
 
 namespace DIGI_Utils {
@@ -48,6 +47,28 @@ namespace DIGI_Utils {
         }
     }
 
+    void processReceivedLoRaMessage(String sender, String packet) {
+        if (packet.indexOf("{") > 0) {     // ack?
+            String ackMessage = "ack" + packet.substring(packet.indexOf("{") + 1);
+            ackMessage.trim();
+            delay(4000);
+            //Serial.println(ackMessage);
+            for (int i = sender.length(); i < 9; i++) {
+                sender += ' ';
+            }
+
+            LoRa_Utils::changeFreq(434.855, 9, 7, 125);
+            if (Config.beacon.path == "") {
+                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1,RFONLY::" + sender + ":" + ackMessage);
+            } else {
+                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1,RFONLY," + Config.beacon.path + "::" + sender + ":" + ackMessage);
+            }
+            LoRa_Utils::changeFreq(436.05, 9, 7, 125);
+
+            String receivedMessage = packet.substring(packet.indexOf(":") + 1, packet.indexOf("{"));
+        }
+    }
+
     void processPacket(String packet) {
         String loraPacket, Sender, AddresseeAndMessage, Addressee;
         if (packet != "") {
@@ -57,11 +78,17 @@ namespace DIGI_Utils {
                     AddresseeAndMessage = packet.substring(packet.indexOf("::") + 2);
                     Addressee = AddresseeAndMessage.substring(0, AddresseeAndMessage.indexOf(":"));
                     Addressee.trim();
+                    if (packet.indexOf("::") > 10 && Addressee == Config.callsign) {      // its a message for me!
+                        processReceivedLoRaMessage(Sender, AddresseeAndMessage);
+                    }
+
                     if (packet.indexOf("SKYY1-") > 10 && Config.digi.mode == 2) { // If should repeat packet (SKYY1 Digi)
                         loraPacket = generateDigiRepeatedPacket(packet.substring(3), Config.callsign);
                         if (loraPacket != "") {
                             delay(500);
-                            LoRa_Utils::sendNewPacket("APRS", loraPacket);
+                            LoRa_Utils::changeFreq(434.855, 9, 7, 125);
+                            LoRa_Utils::sendNewPacket(loraPacket);
+                            LoRa_Utils::changeFreq(436.05, 9, 7, 125);
                         }
                     }
                 }

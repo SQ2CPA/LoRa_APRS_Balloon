@@ -29,7 +29,6 @@ void Configuration::writeFile() {
     data["digi"]["mode"] = digi.mode;
 
     data["beacon"]["comment"] = beacon.comment;
-    data["beacon"]["interval"] = beacon.interval;
     data["beacon"]["latitude"] = beacon.latitude;
     data["beacon"]["longitude"] = beacon.longitude;
     data["beacon"]["overlay"] = beacon.overlay;
@@ -38,10 +37,6 @@ void Configuration::writeFile() {
     data["beacon"]["path"] = beacon.path;
 
     data["lora"]["rxFreq"] = loramodule.rxFreq;
-    data["lora"]["txFreq"] = loramodule.txFreq;
-    data["lora"]["spreadingFactor"] = loramodule.spreadingFactor;
-    data["lora"]["signalBandwidth"] = loramodule.signalBandwidth;
-    data["lora"]["codingRate4"] = loramodule.codingRate4;
     data["lora"]["power"] = loramodule.power;
     data["lora"]["txActive"] = loramodule.txActive;
     data["lora"]["rxActive"] = loramodule.rxActive;
@@ -87,9 +82,6 @@ bool Configuration::readFile() {
         externalVoltageMeasurement      = data["other"]["externalVoltageMeasurement"].as<bool>();
         externalVoltagePin              = data["other"]["externalVoltagePin"].as<int>();
 
-        loramodule.spreadingFactor      = data["lora"]["spreadingFactor"].as<int>();
-        loramodule.signalBandwidth      = data["lora"]["signalBandwidth"].as<long>();
-        loramodule.codingRate4          = data["lora"]["codingRate4"].as<int>();
         loramodule.power                = data["lora"]["power"].as<int>();
 
         ota.username                    = data["ota"]["username"].as<String>();
@@ -100,13 +92,11 @@ bool Configuration::readFile() {
         beacon.comment                    = data["beacon"]["comment"].as<String>();
         beacon.overlay                    = data["beacon"]["overlay"].as<String>();
         beacon.symbol                     = data["beacon"]["symbol"].as<String>();
-        beacon.interval                   = data["beacon"]["interval"].as<int>();
         beacon.sendViaRF                  = data["beacon"]["sendViaRF"].as<bool>();
         beacon.path                       = data["beacon"]["path"].as<String>();
 
         digi.mode                         = data["digi"]["mode"].as<int>();
 
-        loramodule.txFreq                 = data["lora"]["txFreq"].as<long>();
         loramodule.rxFreq                 = data["lora"]["rxFreq"].as<long>();
         loramodule.txActive               = data["lora"]["txActive"].as<bool>();
         loramodule.rxActive               = data["lora"]["rxActive"].as<bool>();
@@ -141,7 +131,6 @@ void Configuration::init() {
     beacon.comment = "LoRa APRS Balloon";
     beacon.latitude = 0.0;
     beacon.longitude = 0.0;
-    beacon.interval = 15;
     beacon.overlay = "L";
     beacon.symbol = "#";
     beacon.sendViaRF = false;
@@ -149,11 +138,7 @@ void Configuration::init() {
     
     digi.mode = 0;
 
-    loramodule.txFreq = 433775000;
     loramodule.rxFreq = 433775000;
-    loramodule.spreadingFactor = 12;
-    loramodule.signalBandwidth = 125000;
-    loramodule.codingRate4 = 5;
     loramodule.power = 20;
     loramodule.txActive = false;
     loramodule.rxActive = true;

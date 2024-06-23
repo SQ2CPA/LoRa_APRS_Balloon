@@ -101,11 +101,7 @@ namespace WEB_Utils {
         Config.digi.mode = request->getParam("digi.mode", true)->value().toInt();
 
 
-        Config.loramodule.txFreq = request->getParam("lora.txFreq", true)->value().toInt();
         Config.loramodule.rxFreq = request->getParam("lora.rxFreq", true)->value().toInt();
-        Config.loramodule.spreadingFactor = request->getParam("lora.spreadingFactor", true)->value().toInt();
-        Config.loramodule.signalBandwidth = request->getParam("lora.signalBandwidth", true)->value().toInt();
-        Config.loramodule.codingRate4 = request->getParam("lora.codingRate4", true)->value().toInt();
         Config.loramodule.power = request->getParam("lora.power", true)->value().toInt();
         Config.loramodule.txActive = request->hasParam("lora.txActive", true);
         Config.loramodule.rxActive = request->hasParam("lora.rxActive", true);
@@ -113,7 +109,6 @@ namespace WEB_Utils {
         Config.ota.username = request->getParam("ota.username", true)->value();
         Config.ota.password = request->getParam("ota.password", true)->value();
 
-        Config.beacon.interval = request->getParam("beacon.interval", true)->value().toInt();
         Config.beacon.sendViaRF = request->hasParam("beacon.sendViaRF", true);
         Config.beacon.latitude = request->getParam("beacon.latitude", true)->value().toDouble();
         Config.beacon.longitude = request->getParam("beacon.longitude", true)->value().toDouble();

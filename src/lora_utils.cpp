@@ -35,8 +35,7 @@ namespace LoRa_Utils {
 
     void setup() {
         SPI.begin(RADIO_SCLK_PIN, RADIO_MISO_PIN, RADIO_MOSI_PIN);
-        float freq = (float)Config.loramodule.rxFreq / 1000000;
-        int state = radio.begin(freq);
+        int state = radio.begin(436.05);
         if (state == RADIOLIB_ERR_NONE) {
             Utils::println("Initializing LoRa Module");
         } else {
@@ -47,16 +46,15 @@ namespace LoRa_Utils {
         radio.setDio0Action(setFlag, RISING);
         #endif
         #ifdef HAS_SX126X
-        if (false) { // low power
+        if (!false) {
             radio.setDio1Action(setFlag);
         } else {
             radio.setDIOMapping(1, RADIOLIB_SX126X_IRQ_RX_DONE);
         }
         #endif
-        radio.setSpreadingFactor(Config.loramodule.spreadingFactor);
-        float signalBandwidth = Config.loramodule.signalBandwidth/1000;
-        radio.setBandwidth(signalBandwidth);
-        radio.setCodingRate(Config.loramodule.codingRate4);
+        radio.setSpreadingFactor(9);
+        radio.setBandwidth(125);
+        radio.setCodingRate(7);
         radio.setCRC(true);
 
         #if defined(RADIO_RXEN) && defined(RADIO_TXEN)
@@ -80,24 +78,15 @@ namespace LoRa_Utils {
         }
     }
 
-    void changeFreqTx() {
-        delay(500);
-        float freq = (float)Config.loramodule.txFreq / 1000000;
+    void changeFreq(float freq, int SF, int CR4, float BW) {
+        radio.setSpreadingFactor(SF);
+        radio.setBandwidth(BW);
+        radio.setCodingRate(CR4);
         radio.setFrequency(freq);
     }
 
-    void changeFreqRx() {
-        delay(500);
-        float freq = (float)Config.loramodule.rxFreq / 1000000;
-        radio.setFrequency(freq);
-    }
-
-    void sendNewPacket(const String& typeOfMessage, const String& newPacket) {
+    void sendNewPacket(const String& newPacket) {
         if (!Config.loramodule.txActive) return;
-
-        if (Config.loramodule.txFreq != Config.loramodule.rxFreq) {
-            changeFreqTx();
-        }
 
         #ifdef HAS_INTERNAL_LED
         digitalWrite(internalLedPin, HIGH);
@@ -118,18 +107,7 @@ namespace LoRa_Utils {
         #ifdef HAS_INTERNAL_LED
         digitalWrite(internalLedPin, LOW);
         #endif
-        if (Config.loramodule.txFreq != Config.loramodule.rxFreq) {
-            changeFreqRx();
-        }
         //ignorePacket = true;
-    }
-
-    String generatePacket(String aprsisPacket) {
-        String firstPart, messagePart;
-        aprsisPacket.trim();
-        firstPart = aprsisPacket.substring(0, aprsisPacket.indexOf(","));
-        messagePart = aprsisPacket.substring(aprsisPacket.indexOf("::") + 2);
-        return firstPart + ",TCPIP,WIDE1-1," + Config.callsign + "::" + messagePart;
     }
 
     String packetSanitization(String packet) {
@@ -150,13 +128,13 @@ namespace LoRa_Utils {
     }
 
     String receivePacket() {
-        if(!operationDone && true) return ""; // Low power
+        if(!operationDone && !false) return "";
         
         operationDone = false;
 
         String loraPacket = "";
 
-        if (transmissionFlag && true) { // Low power
+        if (transmissionFlag && !false) {
             radio.startReceive();
             transmissionFlag = false;
         } else {
@@ -169,7 +147,7 @@ namespace LoRa_Utils {
                     Utils::println("<--- LoRa Packet Rx    : " + loraPacket);
                     Utils::println("(RSSI:" + String(rssi) + " / SNR:" + String(snr) + " / FreqErr:" + String(freqError) + ")");
 
-                    if (true) { // Low power
+                    if (!false) {
                         ReceivedPacket receivedPacket;
                         receivedPacket.millis = millis();
                         receivedPacket.packet = loraPacket.substring(3);

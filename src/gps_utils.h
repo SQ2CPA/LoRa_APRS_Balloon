@@ -8,8 +8,7 @@ namespace GPS_Utils {
 
     char *ax25_base91enc(char *s, uint8_t n, uint32_t v);
     String encodeGPS(float latitude, float longitude, String overlay, String symbol);
-    String generateBeacon();
-    String generateiGateLoRaBeacon();
+    String generateBeacon(double latitude, double longitude, int speed, int direction, int altitude);
     double calculateDistanceCourse(double latitude, double longitude);
     String decodeEncodedGPS(String packet);
     String getReceivedGPS(String packet);

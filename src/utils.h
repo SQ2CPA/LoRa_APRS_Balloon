@@ -14,11 +14,8 @@ public:
 namespace Utils {
 
     void processStatus();
-    String getLocalIP();
-    void setupDisplay();
-    void checkBeaconInterval();
+    bool checkBeaconInterval();
     void checkWiFiInterval();
-    void validateFreqs();
     void print(String text);
     void println(String text);
 

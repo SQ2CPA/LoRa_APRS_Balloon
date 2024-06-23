@@ -4,7 +4,6 @@
 #include "gps_utils.h"
 
 extern Configuration  Config;
-extern WiFiClient     espClient;
 String                distance;
 
 
@@ -16,6 +15,72 @@ namespace GPS_Utils {
             v /= 91;
         }
         return(s);
+    }
+
+    String double2string(double n, int ndec) {
+        String r = "";
+        if (n>-1 && n<0) {
+            r = "-";
+        }   
+        int v = n;
+        r += v;
+        r += '.';
+        for (int i = 0; i < ndec; i++) {
+            n -= v;
+            n = 10 * abs(n);
+            v = n;
+            r += v;
+        }
+        return r;
+    }
+
+    String processLatitudeAPRS(double lat) {
+        String degrees = double2string(lat,6);
+        String north_south, latitude, convDeg3;
+        float convDeg, convDeg2;
+
+        if (abs(degrees.toFloat()) < 10) {
+            latitude += "0";
+        }
+        if (degrees.indexOf("-") == 0) {
+            north_south = "S";
+            latitude += degrees.substring(1,degrees.indexOf("."));
+        } else {
+            north_south = "N";
+            latitude += degrees.substring(0,degrees.indexOf("."));
+        }
+        convDeg = abs(degrees.toFloat()) - abs(int(degrees.toFloat()));
+        convDeg2 = (convDeg * 60)/100;
+        convDeg3 = String(convDeg2,6);
+        latitude += convDeg3.substring(convDeg3.indexOf(".")+1,convDeg3.indexOf(".")+3) + "." + convDeg3.substring(convDeg3.indexOf(".")+3,convDeg3.indexOf(".")+5);
+        latitude += north_south;
+        return latitude;
+    }
+
+    String processLongitudeAPRS(double lon) {
+        String degrees = double2string(lon,6);
+        String east_west, longitude, convDeg3;
+        float convDeg, convDeg2;
+        
+        if (abs(degrees.toFloat()) < 100) {
+            longitude += "0";
+        }
+        if (abs(degrees.toFloat()) < 10) {
+            longitude += "0";
+        }
+        if (degrees.indexOf("-") == 0) {
+            east_west = "W";
+            longitude += degrees.substring(1,degrees.indexOf("."));
+        } else {
+            east_west = "E";
+            longitude += degrees.substring(0,degrees.indexOf("."));
+        }
+        convDeg = abs(degrees.toFloat()) - abs(int(degrees.toFloat()));
+        convDeg2 = (convDeg * 60)/100;
+        convDeg3 = String(convDeg2,6);
+        longitude += convDeg3.substring(convDeg3.indexOf(".")+1,convDeg3.indexOf(".")+3) + "." + convDeg3.substring(convDeg3.indexOf(".")+3,convDeg3.indexOf(".")+5);
+        longitude += east_west;
+        return longitude;
     }
 
     String encodeGPS(float latitude, float longitude, String overlay, String symbol) {
@@ -47,14 +112,31 @@ namespace GPS_Utils {
         return encodedData;
     }
 
-    String generateBeacon() {
-        String beaconPacket = Config.callsign + ">APLRG1," + Config.beacon.path;
+    // String generateBeacon() {
+    //     String beaconPacket = Config.callsign + ">APLRG1," + Config.beacon.path;
 
-        return beaconPacket + ":!" + encodeGPS(Config.beacon.latitude, Config.beacon.longitude, Config.beacon.overlay, Config.beacon.symbol);;
-    }
+    //     return beaconPacket + ":!" + encodeGPS(Config.beacon.latitude, Config.beacon.longitude, Config.beacon.overlay, Config.beacon.symbol);;
+    // }
 
-    String generateiGateLoRaBeacon() {
-        return Config.callsign + ">APLRG1," + Config.beacon.path + ":!" + encodeGPS(Config.beacon.latitude, Config.beacon.longitude, Config.beacon.overlay, Config.beacon.symbol);
+    String generateBeacon(double latitude, double longitude, int speed, int direction, int altitude) {
+        String stationLatitude = processLatitudeAPRS(latitude);
+        String stationLongitude = processLongitudeAPRS(longitude);
+
+        String tspeed = String(speed); 
+        String tdirection = String(direction);
+        String taltitude = String(altitude);
+
+        while (tspeed.length() < 3) tspeed = "0" + tspeed;
+        while (tdirection.length() < 3) tdirection = "0" + tdirection;
+        while (taltitude.length() < 6) taltitude = "0" + taltitude;
+
+        String beaconPacket = Config.callsign + ">APLRG1";
+
+        if (Config.beacon.path != "") {
+            beaconPacket += "," + Config.beacon.path;
+        }
+
+        return beaconPacket + ":!" + stationLatitude + Config.beacon.overlay + stationLongitude + Config.beacon.symbol + tdirection + "/" + tspeed + "/A=" +  taltitude + "/";
     }
 
     double calculateDistanceTo(double latitude, double longitude) {

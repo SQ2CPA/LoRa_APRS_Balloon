@@ -7,14 +7,11 @@
 #include "gps_utils.h"
 #include "utils.h"
 
-extern WiFiClient           espClient;
 extern Configuration        Config;
 extern bool                 statusAfterBoot;
 extern uint32_t             lastBeaconTx;
 extern bool                 beaconUpdate;
-extern String               iGateBeaconPacket;
-extern String               iGateLoRaBeaconPacket;
-extern std::vector<String>  lastHeardStation;
+extern String               beaconPacket;
 extern int                  rssi;
 extern float                snr;
 extern int                  freqError;
@@ -22,77 +19,88 @@ extern String               distance;
 extern uint32_t             lastWiFiCheck;
 extern bool                 WiFiConnect;
 extern bool                 WiFiConnected;
+extern int                  beaconNum;
+extern int                  beaconFrequency;
 
 
 namespace Utils {
 
     void processStatus() {
-        String status = Config.callsign + ">APLRG1," + Config.beacon.path;
+        String e = Config.beacon.path;
+
+        if (e != "") {
+            e = "," + e;
+        }
+
+        String status = Config.callsign + ">APLRG1" + e;
 
         if (statusAfterBoot && Config.beacon.sendViaRF) {
             delay(2000);
-            status += ":>LoRa APRS Balloon booted";
-            LoRa_Utils::sendNewPacket("APRS", status);
+            status += ":>LoRa APRS RX 436.050 @1k2 SKYY1-1 DIGI";
+            LoRa_Utils::changeFreq(434.855, 9, 7, 125);
+            LoRa_Utils::sendNewPacket(status);
+            LoRa_Utils::changeFreq(436.05, 9, 7, 125);
             statusAfterBoot = false;
         }
     }
 
-    String getLocalIP() {
-        if (!WiFiConnected) {
-            return "IP :  192.168.4.1";
-        } else {
-            return "IP :  " + String(WiFi.localIP()[0]) + "." + String(WiFi.localIP()[1]) + "." + String(WiFi.localIP()[2]) + "." + String(WiFi.localIP()[3]);
-        }        
-    }
-
-    void setupDisplay() {
-        #ifdef HAS_INTERNAL_LED
-        digitalWrite(internalLedPin,HIGH);
-        #endif
-        Serial.println("\nStarting Station: " + Config.callsign);
-        #ifdef HAS_INTERNAL_LED
-        digitalWrite(internalLedPin,LOW);
-        #endif
-    }
-
-    void checkBeaconInterval() {
+    bool checkBeaconInterval() {
         uint32_t lastTx = millis() - lastBeaconTx;
-        String beaconPacket             = iGateBeaconPacket;
-        String secondaryBeaconPacket    = iGateLoRaBeaconPacket;
+        String tBeaconPacket = beaconPacket;
 
-        if (lastBeaconTx == 0 || lastTx >= Config.beacon.interval * 60 * 1000) {
+        if (lastBeaconTx == 0 || lastTx >= 0.40 * 60 * 1000) { // ~25s
             beaconUpdate = true;    
         }
 
         if (beaconUpdate) {
             Utils::println("-- Sending Beacon --");
 
-            beaconPacket += Config.beacon.comment;
-            secondaryBeaconPacket += Config.beacon.comment;
+            tBeaconPacket += Config.beacon.comment;
 
             #if defined(TTGO_T_LORA32_V2_1) || defined(HELTEC_V2) || defined(HELTEC_HTCT62)
             if (Config.sendBatteryVoltage) {
-                beaconPacket += " Batt=" + String(BATTERY_Utils::checkBattery(),2) + "V";
-                secondaryBeaconPacket += " Batt=" + String(BATTERY_Utils::checkBattery(),2) + "V";
+                tBeaconPacket += " Batt=" + String(BATTERY_Utils::checkBattery(),2) + "V";
             }
             #endif
 
             if (Config.externalVoltageMeasurement) { 
-                beaconPacket += " Ext=" + String(BATTERY_Utils::checkExternalVoltage(),2) + "V";
-                secondaryBeaconPacket += " Ext=" + String(BATTERY_Utils::checkExternalVoltage(),2) + "V";
+                tBeaconPacket += " Ext=" + String(BATTERY_Utils::checkExternalVoltage(),2) + "V";
             }
 
             if (Config.beacon.sendViaRF) {
-                LoRa_Utils::sendNewPacket("APRS", secondaryBeaconPacket);
+                switch (beaconFrequency) {
+                    case 1:
+                    LoRa_Utils::changeFreq(434.855, 9, 7, 125);
+                    break;
+                    case 2:
+                    LoRa_Utils::changeFreq(433.775, 12, 5, 125);
+                    break;
+                    case 0:
+                    LoRa_Utils::changeFreq(439.9125, 12, 5, 125);
+                    break;
+                }
+
+                LoRa_Utils::sendNewPacket(tBeaconPacket);
+                LoRa_Utils::changeFreq(436.05, 9, 7, 125);
             }
 
             lastBeaconTx = millis();
             beaconUpdate = false;
+            beaconNum++;
+            beaconFrequency++;
+
+            if (beaconFrequency >= 3) {
+                beaconFrequency = 0;
+            }
+
+            return true;
         }
 
         if (statusAfterBoot) {
             processStatus();
         }
+
+        return false;
     }
 
     void checkWiFiInterval() {
@@ -105,15 +113,6 @@ namespace Utils {
         WIFI_Utils::startWiFi();
         lastWiFiCheck = millis();
         WiFiConnect = false;
-        }
-    }
-
-    void validateFreqs() {
-        if (Config.loramodule.txFreq != Config.loramodule.rxFreq && abs(Config.loramodule.txFreq - Config.loramodule.rxFreq) < 125000) {
-            Serial.println("Tx Freq less than 125kHz from Rx Freq ---> NOT VALID");
-            Config.loramodule.txFreq = Config.loramodule.rxFreq; // Inform about that but then change the TX QRG to RX QRG and reset the device
-            Config.writeFile();
-            ESP.restart();
         }
     }
 

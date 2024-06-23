@@ -36,13 +36,9 @@ public:
 
 class LoraModule {
 public:
-    long    txFreq;
     long    rxFreq;
     bool    txActive;
     bool    rxActive;
-    int     spreadingFactor;
-    long    signalBandwidth;
-    int     codingRate4;
     int     power;
 };
 
