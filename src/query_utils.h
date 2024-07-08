@@ -3,10 +3,10 @@
 
 #include <Arduino.h>
 
+namespace QUERY_Utils
+{
 
-namespace QUERY_Utils {
-
-    String process(String query, String station, String queryOrigin);
+    String process(String query, String station);
 
 }
 

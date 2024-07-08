@@ -7,26 +7,32 @@
 #include "gps_utils.h"
 #include "utils.h"
 
-extern Configuration    Config;
+extern Configuration Config;
 
+namespace DIGI_Utils
+{
 
-namespace DIGI_Utils {
-
-    String generateDigiRepeatedPacket(String packet, String callsign) {
+    String generateDigiRepeatedPacket(String packet, String callsign)
+    {
         String sender, temp0, tocall, path;
         sender = packet.substring(0, packet.indexOf(">"));
         temp0 = packet.substring(packet.indexOf(">") + 1, packet.indexOf(":"));
-        if (temp0.indexOf(",") > 2) {
+        if (temp0.indexOf(",") > 2)
+        {
             tocall = temp0.substring(0, temp0.indexOf(","));
             path = temp0.substring(temp0.indexOf(",") + 1, temp0.indexOf(":"));
-            if (path.indexOf("SKYY1-") >= 0) {
-                String hop = path.substring(path.indexOf("SKYY1-") + 6, path.indexOf("SKYY1-") + 7);
-                if (hop.toInt() >= 1 && hop.toInt() <= 7) {
-                    if (hop.toInt() == 1) {
-                        path.replace("SKYY1-1", callsign + "*");
+            if (path.indexOf("SKY1-") >= 0)
+            {
+                String hop = path.substring(path.indexOf("SKY1-") + 5, path.indexOf("SKY1-") + 6);
+                if (hop.toInt() >= 1 && hop.toInt() <= 7)
+                {
+                    if (hop.toInt() == 1)
+                    {
+                        path.replace("SKY1-1", callsign + "*");
                     }
-                    else {
-                        path.replace("SKYY1-" + hop, callsign + "*,SKYY1-" + String(hop.toInt() - 1));
+                    else
+                    {
+                        path.replace("SKY1-" + hop, callsign + "*,SKY1-" + String(hop.toInt() - 1));
                     }
                     path.replace("WIDE1-1", "WIDE1*");
                     path.replace("WIDE2-1", "WIDE2*");
@@ -34,61 +40,92 @@ namespace DIGI_Utils {
                     String repeatedPacket = sender + ">" + tocall + "," + path + packet.substring(packet.indexOf(":"));
                     return repeatedPacket;
                 }
-                else {
+                else
+                {
                     return "";
                 }
             }
-            else {
+            else
+            {
                 return "";
             }
         }
-        else {
+        else
+        {
             return "";
         }
     }
 
-    void processReceivedLoRaMessage(String sender, String packet) {
-        if (packet.indexOf("{") > 0) {     // ack?
+    void processReceivedLoRaMessage(String sender, String packet)
+    {
+        String receivedMessage;
+
+        if (packet.indexOf("{") > 0)
+        { // ack?
             String ackMessage = "ack" + packet.substring(packet.indexOf("{") + 1);
             ackMessage.trim();
             delay(4000);
-            //Serial.println(ackMessage);
-            for (int i = sender.length(); i < 9; i++) {
+            // Serial.println(ackMessage);
+            for (int i = sender.length(); i < 9; i++)
+            {
                 sender += ' ';
             }
 
-            LoRa_Utils::changeFreq(434.855, 9, 7, 125);
-            if (Config.beacon.path == "") {
+            LoRa_Utils::changeFreq(434.855, "1200");
+            if (Config.beacon.path == "")
+            {
                 LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1,RFONLY::" + sender + ":" + ackMessage);
-            } else {
-                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1,RFONLY," + Config.beacon.path + "::" + sender + ":" + ackMessage);
             }
-            LoRa_Utils::changeFreq(436.05, 9, 7, 125);
+            else
+            {
+                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1," + Config.beacon.path + "::" + sender + ":" + ackMessage);
+            }
+            LoRa_Utils::changeToRX();
 
-            String receivedMessage = packet.substring(packet.indexOf(":") + 1, packet.indexOf("{"));
+            receivedMessage = packet.substring(packet.indexOf(":") + 1, packet.indexOf("{"));
+        }
+        else
+        {
+            receivedMessage = packet.substring(packet.indexOf(":") + 1);
+        }
+
+        if (receivedMessage.indexOf("?") == 0)
+        {
+
+            String result = QUERY_Utils::process(receivedMessage, sender);
+
+            LoRa_Utils::changeFreq(434.855, "1200");
+            LoRa_Utils::sendNewPacket(result);
+            LoRa_Utils::changeToRX();
         }
     }
 
-    void processPacket(String packet) {
+    void processPacket(String packet)
+    {
         String loraPacket, Sender, AddresseeAndMessage, Addressee;
-        if (packet != "") {
-            if ((packet.substring(0, 3) == "\x3c\xff\x01") && (packet.indexOf("NOGATE") == -1)) {
+        if (packet != "")
+        {
+            if ((packet.substring(0, 3) == "\x3c\xff\x01") && (packet.indexOf("NOGATE") == -1))
+            {
                 Sender = packet.substring(3, packet.indexOf(">"));
-                if (Sender != Config.callsign) {
+                if (Sender != Config.callsign)
+                {
                     AddresseeAndMessage = packet.substring(packet.indexOf("::") + 2);
                     Addressee = AddresseeAndMessage.substring(0, AddresseeAndMessage.indexOf(":"));
                     Addressee.trim();
-                    if (packet.indexOf("::") > 10 && Addressee == Config.callsign) {      // its a message for me!
+                    if (packet.indexOf("::") > 10 && Addressee == Config.callsign)
+                    { // its a message for me!
                         processReceivedLoRaMessage(Sender, AddresseeAndMessage);
                     }
-
-                    if (packet.indexOf("SKYY1-") > 10 && Config.digi.mode == 2) { // If should repeat packet (SKYY1 Digi)
+                    else if (packet.indexOf("SKY1-") > 10 && Config.digi.mode == 2)
+                    { // If should repeat packet (SKY1 Digi)
                         loraPacket = generateDigiRepeatedPacket(packet.substring(3), Config.callsign);
-                        if (loraPacket != "") {
+                        if (loraPacket != "")
+                        {
                             delay(500);
-                            LoRa_Utils::changeFreq(434.855, 9, 7, 125);
+                            LoRa_Utils::changeFreq(434.855, "1200");
                             LoRa_Utils::sendNewPacket(loraPacket);
-                            LoRa_Utils::changeFreq(436.05, 9, 7, 125);
+                            LoRa_Utils::changeToRX();
                         }
                     }
                 }
@@ -96,7 +133,8 @@ namespace DIGI_Utils {
         }
     }
 
-    void loop(String packet) {
+    void loop(String packet)
+    {
         processPacket(packet);
     }
 
