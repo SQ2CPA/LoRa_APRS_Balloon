@@ -45,7 +45,6 @@ public:
     String rxSpeed;
     bool txActive;
     bool rxActive;
-    int power;
 };
 
 class OTA

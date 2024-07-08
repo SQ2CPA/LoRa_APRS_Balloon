@@ -15,6 +15,7 @@ namespace LoRa_Utils
     void changeFreq(float freq, String speed);
     void changeToRX();
     void startReceive();
+    void setOutputPower(int power);
 
 }
 

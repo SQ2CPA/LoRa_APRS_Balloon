@@ -82,10 +82,10 @@ namespace LoRa_Utils
 #endif
 
 #if defined(HAS_SX126X) || ESP32C3_SX126X
-        state = radio.setOutputPower(Config.loramodule.power); // max value 20dB for 400M30S as it has Low Noise Amp
+        state = radio.setOutputPower(15); // max value 20dB for 400M30S as it has Low Noise Amp
 #endif
 #if defined(HAS_SX127X) || ESP32_DIY_1W_LoRa
-        state = radio.setOutputPower(Config.loramodule.power); // max value 20dB for 400M30S as it has Low Noise Amp
+        state = radio.setOutputPower(15); // max value 20dB for 400M30S as it has Low Noise Amp
 #endif
 
         if (state == RADIOLIB_ERR_NONE)
@@ -98,6 +98,11 @@ namespace LoRa_Utils
             while (true)
                 ;
         }
+    }
+
+    void setOutputPower(int power)
+    {
+        radio.setOutputPower(power);
     }
 
     void changeToRX()

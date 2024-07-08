@@ -102,7 +102,6 @@ namespace WEB_Utils {
 
 
         Config.loramodule.rxFreq = request->getParam("lora.rxFreq", true)->value().toInt();
-        Config.loramodule.power = request->getParam("lora.power", true)->value().toInt();
         Config.loramodule.txActive = request->hasParam("lora.txActive", true);
         Config.loramodule.rxActive = request->hasParam("lora.rxActive", true);
 

@@ -132,6 +132,9 @@ bool setTodaysLocationSeparator = false;
 bool setFirstFullLocation = false;
 bool readHistoricalLocations = false;
 
+int okFrames = 0;
+int outputPower = 15;
+
 void loop()
 {
     while (gpsPort.available() > 0)
@@ -155,6 +158,7 @@ void loop()
     Config.beacon.comment += "S" + String(gps.satellites.value());
     Config.beacon.comment += "F" + String(gpsFails);
     Config.beacon.comment += "R" + String(rxPackets);
+    Config.beacon.comment += "O" + String(outputPower);
     Config.beacon.comment += "N21";
     Config.beacon.comment += " ";
 
@@ -219,6 +223,18 @@ void loop()
         else
         {
             gpsFails = 0;
+        }
+
+        okFrames++;
+
+        if (okFrames >= 3 && outputPower < 19)
+        {
+            okFrames = 0;
+            outputPower++;
+
+            LoRa_Utils::setOutputPower(outputPower);
+
+            Utils::println("Increase power to: " + String(outputPower));
         }
     }
 

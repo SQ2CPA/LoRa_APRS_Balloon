@@ -41,7 +41,6 @@ void Configuration::writeFile()
 
     data["lora"]["rxFreq"] = loramodule.rxFreq;
     data["lora"]["rxSpeed"] = loramodule.rxSpeed;
-    data["lora"]["power"] = loramodule.power;
     data["lora"]["txActive"] = loramodule.txActive;
     data["lora"]["rxActive"] = loramodule.rxActive;
 
@@ -89,8 +88,6 @@ bool Configuration::readFile()
         sendBatteryVoltage = data["other"]["sendBatteryVoltage"].as<bool>();
         externalVoltageMeasurement = data["other"]["externalVoltageMeasurement"].as<bool>();
         externalVoltagePin = data["other"]["externalVoltagePin"].as<int>();
-
-        loramodule.power = data["lora"]["power"].as<int>();
 
         ota.username = data["ota"]["username"].as<String>();
         ota.password = data["ota"]["password"].as<String>();
@@ -153,7 +150,6 @@ void Configuration::init()
 
     loramodule.rxFreq = 436.05;
     loramodule.rxSpeed = "1200";
-    loramodule.power = 20;
     loramodule.txActive = false;
     loramodule.rxActive = true;
 
