@@ -11,6 +11,8 @@ namespace Historical_location
     bool sendToRF();
     String makeDiff(int a);
     String makeLocationString();
+    void setToday(String location);
+    void process(String location);
 
 }
 

@@ -278,67 +278,21 @@ void loop()
 
         if ((lastHistoricalLocationsCheck == 0 || lastCheck >= 15 * 1000) && Config.beacon.latitude != 0 && Config.beacon.longitude != 0)
         {
-            Utils::println("Checking historical location");
-
             lastHistoricalLocationsCheck = millis();
+
+            Utils::println("Checking historical location");
 
             String location = Historical_location::makeLocationString();
 
             if (!setTodaysLocationSeparator)
             {
-                if (lastHistoricalLocations != "")
-                    lastHistoricalLocations += ";";
-
-                lastHistoricalLocations += location;
-
-                lastHistoricalLatitude = int(Config.beacon.latitude);
-                lastHistoricalLongitude = int(Config.beacon.longitude);
-
-                Utils::println("Inserted new day separator and first location for historical location");
-
-                Historical_location::write(lastHistoricalLocations);
-
-                Utils::print("Current historical locations: ");
-                Utils::println(lastHistoricalLocations);
-
+                Historical_location::setToday(location);
                 setTodaysLocationSeparator = true;
             }
 
             if (int(Config.beacon.latitude) != lastHistoricalLatitude || int(Config.beacon.longitude) != lastHistoricalLongitude)
             {
-                int diffLatitude = lastHistoricalLatitude - int(Config.beacon.latitude);
-                int diffLongitude = lastHistoricalLongitude - int(Config.beacon.longitude);
-
-                if (diffLatitude <= 1 && diffLatitude >= -1 && diffLongitude <= 1 && diffLongitude >= -1)
-                {
-                    String diffLatitudeS = Historical_location::makeDiff(diffLatitude);
-                    String diffLongitudeS = Historical_location::makeDiff(diffLongitude);
-
-                    if (diffLatitudeS != "00" || diffLongitudeS != "00")
-                    {
-                        lastHistoricalLocations += diffLatitudeS;
-                        lastHistoricalLocations += diffLongitudeS;
-
-                        Historical_location::write(lastHistoricalLocations);
-
-                        Utils::print("Inserted new historical location: ");
-                        Utils::println(location);
-
-                        lastHistoricalLatitude = int(Config.beacon.latitude);
-                        lastHistoricalLongitude = int(Config.beacon.longitude);
-                    }
-                }
-                else
-                {
-                    Utils::print("Got too fast location change: ");
-                    Utils::println(String(diffLatitude) + " " + String(diffLongitude));
-
-                    lastHistoricalLatitude = int(Config.beacon.latitude);
-                    lastHistoricalLongitude = int(Config.beacon.longitude);
-                }
-
-                Utils::print("Current historical locations: ");
-                Utils::println(lastHistoricalLocations);
+                Historical_location::process(location);
             }
         }
     }

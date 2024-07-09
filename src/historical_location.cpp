@@ -5,6 +5,8 @@
 #include "lora_utils.h"
 
 extern Configuration Config;
+extern int lastHistoricalLatitude;
+extern int lastHistoricalLongitude;
 
 extern uint32_t lastHistoricalLocationsTx;
 extern int historicalLocationsFrequency;
@@ -258,5 +260,90 @@ namespace Historical_location
         }
 
         return false;
+    }
+
+    void setToday(String location)
+    {
+        if (lastHistoricalLocations != "")
+            lastHistoricalLocations += ";";
+
+        lastHistoricalLocations += location;
+
+        lastHistoricalLatitude = int(Config.beacon.latitude);
+        lastHistoricalLongitude = int(Config.beacon.longitude);
+
+        Utils::println("Inserted new day separator and first location for historical location");
+
+        write(lastHistoricalLocations);
+
+        Utils::print("Current historical locations: ");
+        Utils::println(lastHistoricalLocations);
+    }
+
+    void makeDiffAndInsert(int diffLatitude, int diffLongitude, String location)
+    {
+        String diffLatitudeS = Historical_location::makeDiff(diffLatitude);
+        String diffLongitudeS = Historical_location::makeDiff(diffLongitude);
+
+        if (diffLatitudeS != "00" || diffLongitudeS != "00")
+        {
+            lastHistoricalLocations += diffLatitudeS;
+            lastHistoricalLocations += diffLongitudeS;
+
+            Historical_location::write(lastHistoricalLocations);
+
+            Utils::print("Inserted new historical location: ");
+            Utils::println(location);
+        }
+    }
+
+    void process(String location)
+    {
+        int diffLatitude = lastHistoricalLatitude - int(Config.beacon.latitude);
+        int diffLongitude = lastHistoricalLongitude - int(Config.beacon.longitude);
+
+        if (abs(diffLatitude) <= 2 && abs(diffLongitude) <= 2)
+        {
+            if (abs(diffLatitude) > 1 || abs(diffLongitude) > 1)
+            {
+                bool doubleLatitude = abs(diffLatitude) > 1;
+                bool doubleLongitude = abs(diffLongitude) > 1;
+
+                if (doubleLatitude)
+                    diffLatitude = diffLatitude > 0 ? diffLatitude-- : diffLatitude++;
+
+                if (doubleLongitude)
+                    diffLongitude = diffLongitude > 0 ? diffLongitude-- : diffLongitude++;
+
+                makeDiffAndInsert(diffLatitude, diffLongitude, location);
+
+                if (doubleLatitude)
+                {
+                    makeDiffAndInsert(diffLatitude, 0, location);
+                }
+                else
+                {
+                    makeDiffAndInsert(0, diffLongitude, location);
+                }
+
+                lastHistoricalLatitude = int(Config.beacon.latitude);
+                lastHistoricalLongitude = int(Config.beacon.longitude);
+            }
+            else if (abs(diffLatitude) > 1 && abs(diffLongitude) > 1)
+            {
+                makeDiffAndInsert(diffLatitude, diffLongitude, location);
+            }
+        }
+        else
+        {
+            Utils::print("Got too fast location change: ");
+            Utils::println(String(diffLatitude) + " " + String(diffLongitude));
+
+            lastHistoricalLatitude = int(Config.beacon.latitude);
+            lastHistoricalLongitude = int(Config.beacon.longitude);
+        }
+
+        Utils::print("Current historical locations: ");
+        Utils::println(lastHistoricalLocations);
     }
 }
