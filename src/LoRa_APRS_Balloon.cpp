@@ -79,8 +79,6 @@ void setup()
 
     LoRa_Utils::setup();
 
-    beaconPacket = GPS_Utils::generateBeacon(0, 0, 0, 0, 0);
-
     // WIFI_Utils::setup();
     // WEB_Utils::setup();
 
@@ -135,6 +133,8 @@ bool readHistoricalLocations = false;
 int okFrames = 0;
 int outputPower = 15;
 
+int currentDay = -1;
+
 void loop()
 {
     while (gpsPort.available() > 0)
@@ -159,6 +159,10 @@ void loop()
     Config.beacon.comment += "F" + String(gpsFails);
     Config.beacon.comment += "R" + String(rxPackets);
     Config.beacon.comment += "O" + String(outputPower);
+
+    if (currentDay != -1)
+        Config.beacon.comment += "D" + String(currentDay);
+
     Config.beacon.comment += "N21";
     Config.beacon.comment += " ";
 
@@ -241,7 +245,7 @@ void loop()
     String packet = "";
     if (Config.loramodule.rxActive)
     {
-        packet = LoRa_Utils::receivePacket(); // We need to fetch LoRa packet above APRSIS and Digi
+        packet = LoRa_Utils::receivePacket();
     }
 
     if (packet != "")
@@ -249,8 +253,8 @@ void loop()
         rxPackets++;
 
         if (Config.digi.mode == 2)
-        {                             // If Digi enabled
-            DIGI_Utils::loop(packet); // Send received packet to Digi
+        {
+            DIGI_Utils::loop(packet);
         }
     }
 
@@ -262,6 +266,12 @@ void loop()
         {
             lastHistoricalLocations = Historical_location::read();
             readHistoricalLocations = true;
+
+            for (int i = 0; i < lastHistoricalLocations.length(); i++)
+            {
+                if (lastHistoricalLocations.charAt(i) == ' ')
+                    currentDay++;
+            }
         }
 
         uint32_t lastCheck = millis() - lastHistoricalLocationsCheck;
