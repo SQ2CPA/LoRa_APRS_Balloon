@@ -172,8 +172,8 @@ void loop()
     Config.beacon.comment += "F" + String(gpsFails);
     Config.beacon.comment += "R" + String(rxPackets);
 
-    if (outputPower < 20)
-        Config.beacon.comment += "O" + String(outputPower);
+    // if (outputPower < 20)
+    Config.beacon.comment += "O" + String(outputPower);
 
     if (currentDay != -1)
         Config.beacon.comment += "D" + String(currentDay);

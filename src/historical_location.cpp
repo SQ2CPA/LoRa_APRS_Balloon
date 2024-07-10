@@ -301,8 +301,11 @@ namespace Historical_location
             Utils::print("Inserted new historical location: ");
             Utils::print(location);
             Utils::print(" as ");
+
             Utils::print(diffLatitudeS);
+            Utils::println(" ");
             Utils::print(diffLongitudeS);
+
             Utils::println("");
         }
     }

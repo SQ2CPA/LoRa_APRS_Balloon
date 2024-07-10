@@ -12,7 +12,7 @@
 #define RADIO_DIO1_PIN 3  // SX1262 DIO1
 #define RADIO_BUSY_PIN 4  // SX1262 BUSY
 // #define WSPR
-#define DEBUG
+// #define DEBUG
 #endif
 
 #endif
