@@ -11,8 +11,8 @@
 #define RADIO_RST_PIN 5   // SX1262 RST
 #define RADIO_DIO1_PIN 3  // SX1262 DIO1
 #define RADIO_BUSY_PIN 4  // SX1262 BUSY
-// BATTERY_PIN 1
 // #define WSPR
+#define DEBUG
 #endif
 
 #endif

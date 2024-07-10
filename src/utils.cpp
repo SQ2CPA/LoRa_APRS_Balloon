@@ -59,8 +59,6 @@ namespace Utils
 
         if (beaconUpdate)
         {
-            Utils::println("-- Sending Beacon --");
-
             tBeaconPacket += Config.beacon.comment;
 
             // if (Config.sendBatteryVoltage)
@@ -78,12 +76,18 @@ namespace Utils
                 switch (beaconFrequency)
                 {
                 case 1:
+                    Utils::println("-- Sending Beacon [434.855] --");
+
                     LoRa_Utils::changeFreq(434.855, "1200");
                     break;
                 case 2:
+                    Utils::println("-- Sending Beacon [433.775] --");
+
                     LoRa_Utils::changeFreq(433.775, "300");
                     break;
                 case 0:
+                    Utils::println("-- Sending Beacon [439.9125] --");
+
                     LoRa_Utils::changeFreq(439.9125, "300");
                     break;
                 }

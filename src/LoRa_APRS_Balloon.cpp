@@ -18,6 +18,7 @@
 #include <SparkFun_Ublox_Arduino_Library.h>
 #include "historical_location.h"
 #include "wspr.h"
+#include "debug.h"
 
 SoftwareSerial gpsPort(0, 1); // normal
 // SoftwareSerial gpsPort(1, 0); // reversed
@@ -53,8 +54,13 @@ int historicalLocationsFrequency = 0;
 
 std::vector<ReceivedPacket> receivedPackets;
 
+#ifdef DEBUG
+int beaconNum = 50;
+#else
+int beaconNum = 0;
+#endif
+
 String beaconPacket;
-int beaconNum = 0; // DEBUG ONLY 50
 int beaconFrequency = 0;
 
 void setup()
@@ -114,7 +120,9 @@ void setup()
 
     Serial.print("\n\n");
 
-    // Historical_location::write(""); // DEBUG ONLY
+#ifdef DEBUG
+    Historical_location::write("");
+#endif
 
 #ifdef WSPR
     WSPR_Utils::setup();
@@ -163,15 +171,23 @@ void loop()
     Config.beacon.comment += "S" + String(gps.satellites.value());
     Config.beacon.comment += "F" + String(gpsFails);
     Config.beacon.comment += "R" + String(rxPackets);
-    Config.beacon.comment += "O" + String(outputPower);
+
+    if (outputPower < 20)
+        Config.beacon.comment += "O" + String(outputPower);
 
     if (currentDay != -1)
         Config.beacon.comment += "D" + String(currentDay);
 
     Config.beacon.comment += "N22";
+
+    if (WSPR_Utils::isAvailable())
+        Config.beacon.comment += "W";
+
     Config.beacon.comment += " ";
 
-    // gpsFails = 0; // DEBUG ONLY
+#ifdef DEBUG
+    gpsFails = 0;
+#endif
 
     if (!gps.altitude.isValid())
     {
@@ -184,6 +200,10 @@ void loop()
             Config.beacon.comment += "T ";
         }
     }
+
+#ifdef DEBUG
+    Config.beacon.comment += "DEBUG";
+#endif
 
     int knots = 0;
     int course = 0;
@@ -207,10 +227,15 @@ void loop()
         Config.beacon.longitude = 0;
     }
 
-    beaconPacket = GPS_Utils::generateBeacon(Config.beacon.latitude, Config.beacon.longitude, knots, course, altitude);
-    // beaconPacket = GPS_Utils::generateBeacon(0, 0, 0, 0, 0); // DEBUG ONLY
+#ifdef DEBUG
+    beaconPacket = GPS_Utils::generateBeacon(0, 0, 0, 0, 0);
 
-    // altitude = 10000; // DEBUG ONLY
+    altitude = 10000;
+
+    DEBUG_Utils::setDummyLocation();
+#else
+    beaconPacket = GPS_Utils::generateBeacon(Config.beacon.latitude, Config.beacon.longitude, knots, course, altitude);
+#endif
 
     // WIFI_Utils::checkIfAutoAPShouldPowerOff();
 
@@ -220,7 +245,7 @@ void loop()
         return;
     }
 
-    // WIFI_Utils::checkWiFi(); // Always use WiFi, not related to IGate/Digi mode
+    // WIFI_Utils::checkWiFi();
     // Utils::checkWiFiInterval();
 
     if (Utils::checkBeaconInterval())
@@ -236,7 +261,7 @@ void loop()
 
         okFrames++;
 
-        if (okFrames >= 3 && outputPower < 19)
+        if (okFrames >= 3 && outputPower < 20)
         {
             okFrames = 0;
             outputPower++;

@@ -17,7 +17,7 @@ uint8_t txBuffer[WSPR_SYMBOL_COUNT];
 
 extern Configuration Config;
 
-bool isSIAvailable = true;
+bool isSIAvailable = false;
 
 namespace WSPR_Utils
 {
@@ -29,6 +29,7 @@ namespace WSPR_Utils
         Wire.beginTransmission(address);
         if (Wire.endTransmission() == 0)
         {
+            isSIAvailable = true;
             return;
         }
 
@@ -39,12 +40,11 @@ namespace WSPR_Utils
         Wire.beginTransmission(address);
         if (Wire.endTransmission() == 0)
         {
+            isSIAvailable = true;
             return;
         }
 
         Serial.println("Si5351 not Detected at adress 98. There is no Si5351!");
-
-        isSIAvailable = false;
     }
 
     void setRegister(uint8_t reg, uint8_t data)
@@ -246,9 +246,6 @@ namespace WSPR_Utils
         uint32_t a, b, c;
         char CallWithSuPrefix[11];
         uint8_t Length = strlen(call);
-        uint8_t TenDigit = 0;
-        uint8_t Number;
-        uint8_t CharLoop;
         strcpy(CallWithSuPrefix, call);
 
         Length = strlen(CallWithSuPrefix);
