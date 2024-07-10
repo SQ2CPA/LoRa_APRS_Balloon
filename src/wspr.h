@@ -56,10 +56,13 @@
 #define UMesVCC 10
 #define UMesWSPRBandCycleComplete 11
 
+#define rot(x, k) ((x << k) | (x >> (32 - k)))
+
 namespace WSPR_Utils
 {
     void setup();
     void prepareWSPR(uint32_t altitude);
-    void sendWSPR();
+    void sendWSPR(int txMode);
     bool isInTimeslot(int minute, int second);
+    void disableTX();
 }

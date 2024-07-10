@@ -117,6 +117,7 @@ void setup()
     // Historical_location::write(""); // DEBUG ONLY
 
     WSPR_Utils::setup();
+    WSPR_Utils::disableTX();
 }
 
 int rxPackets = 0;
@@ -313,7 +314,12 @@ void loop()
 
             WSPR_Utils::prepareWSPR(altitude);
 
-            WSPR_Utils::sendWSPR();
+            int txMode = 1;
+
+            if (gps.time.minute() == 30)
+                txMode = 0;
+
+            WSPR_Utils::sendWSPR(txMode);
         }
     }
 }

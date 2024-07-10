@@ -55,9 +55,9 @@ namespace WSPR_Utils
         Wire.endTransmission();
     }
 
-    void disableTX(uint8_t clk)
+    void disableTX()
     {
-        setRegister(clk, 0x80);
+        setRegister(SI_CLK0_CONTROL, 0x80);
     }
 
     uint8_t calculatePower(uint8_t dBmIn)
@@ -204,10 +204,9 @@ namespace WSPR_Utils
         return (char)x + 65;
     }
 
-    char *get_mh(double lat, double lon)
+    char *getLocator(double lat, double lon, int size)
     {
-        int size = 4;
-        static char locator[5];
+        static char locator[7];
         double LON_F[] = {20, 2.0, 0.083333, 0.008333, 0.0003472083333333333};
         double LAT_F[] = {10, 1.0, 0.0416665, 0.004166, 0.0001735833333333333};
         int i;
@@ -233,10 +232,85 @@ namespace WSPR_Utils
             lat = fmod(lat, LAT_F[i]);
         }
         locator[i * 2] = 0;
+
+        Serial.println(locator);
+
         return locator;
     }
 
-    void wspr_encode(uint8_t power)
+    uint32_t wspr_call_hash(const char *call)
+    {
+        uint32_t a, b, c;
+        char CallWithSuPrefix[11];
+        uint8_t Length = strlen(call);
+        uint8_t TenDigit = 0;
+        uint8_t Number;
+        uint8_t CharLoop;
+        strcpy(CallWithSuPrefix, call);
+
+        Length = strlen(CallWithSuPrefix);
+
+        a = b = c = 0xdeadbeef + Length + 146;
+
+        const uint32_t *k = (const uint32_t *)CallWithSuPrefix;
+
+        switch (Length)
+        {
+        case 10:
+            c += k[2] & 0xffff;
+            b += k[1];
+            a += k[0];
+            break;
+        case 9:
+            c += k[2] & 0xff;
+            b += k[1];
+            a += k[0];
+            break;
+        case 8:
+            b += k[1];
+            a += k[0];
+            break;
+        case 7:
+            b += k[1] & 0xffffff;
+            a += k[0];
+            break;
+        case 6:
+            b += k[1] & 0xffff;
+            a += k[0];
+            break;
+        case 5:
+            b += k[1] & 0xff;
+            a += k[0];
+            break;
+        case 4:
+            a += k[0];
+            break;
+        case 3:
+            a += k[0] & 0xffffff;
+            break;
+        }
+
+        c ^= b;
+        c -= rot(b, 14);
+        a ^= c;
+        a -= rot(c, 11);
+        b ^= a;
+        b -= rot(a, 25);
+        c ^= b;
+        c -= rot(b, 16);
+        a ^= c;
+        a -= rot(c, 4);
+        b ^= a;
+        b -= rot(a, 14);
+        c ^= b;
+        c -= rot(b, 24);
+
+        c &= 0xFFFF;
+
+        return c;
+    }
+
+    void wspr_encode(uint8_t power, int txMode) // TXMODE 0 = normal, 1 = compressed with 6 chars locator
     {
         memset(txBuffer, 0, sizeof(txBuffer));
 
@@ -245,17 +319,32 @@ namespace WSPR_Utils
         for (int i = 0; i < 6; i++)
             callsign[i] = Config.callsign.charAt(i);
 
-        char *locator = get_mh(Config.beacon.latitude, Config.beacon.longitude);
+        char *locator = getLocator(Config.beacon.latitude, Config.beacon.longitude, 6);
 
-        uint32_t n = wspr_code(callsign[0]);
-        n = n * 36 + wspr_code(callsign[1]);
-        n = n * 10 + wspr_code(callsign[2]);
-        n = n * 27 + (wspr_code(callsign[3]) - 10);
-        n = n * 27 + (wspr_code(callsign[4]) - 10);
-        n = n * 27 + (wspr_code(callsign[5]) - 10);
+        uint32_t n, m;
 
-        uint32_t m = ((179 - 10 * (locator[0] - 'A') - (locator[2] - '0')) * 180) + (10 * (locator[1] - 'A')) + (locator[3] - '0');
-        m = (m * 128) + power + 64;
+        if (txMode == 1)
+        {
+            n = wspr_code(locator[1]);
+            n = n * 36 + wspr_code(locator[2]);
+            n = n * 10 + wspr_code(locator[3]);
+            n = n * 27 + (wspr_code(locator[4]) - 10);
+            n = n * 27 + (wspr_code(locator[5]) - 10);
+            n = n * 27 + (wspr_code(locator[0]) - 10);
+            m = 128 * wspr_call_hash(callsign) - power - 1 + 64;
+        }
+        else
+        {
+            n = wspr_code(callsign[0]);
+            n = n * 36 + wspr_code(callsign[1]);
+            n = n * 10 + wspr_code(callsign[2]);
+            n = n * 27 + (wspr_code(callsign[3]) - 10);
+            n = n * 27 + (wspr_code(callsign[4]) - 10);
+            n = n * 27 + (wspr_code(callsign[5]) - 10);
+
+            m = ((179 - 10 * (locator[0] - 'A') - (locator[2] - '0')) * 180) + (10 * (locator[1] - 'A')) + (locator[3] - '0');
+            m = (m * 128) + power + 64;
+        }
 
         uint8_t c[11];
 
@@ -426,26 +515,26 @@ namespace WSPR_Utils
             }
         }
 
-        disableTX(SI_CLK0_CONTROL);
+        disableTX();
     }
 
-    void sendWSPR()
+    void sendWSPR(int txMode)
     {
         Utils::println("---> WSPR TX START");
 
-        uint64_t freq = WSPR_FREQ20m + (100ULL * random(-100, 100));
+        disableTX();
 
-        disableTX(SI_CLK0_CONTROL);
-
-        wspr_encode(power1);
-        TX(freq);
+        uint64_t freq1 = WSPR_FREQ20m + (100ULL * random(-100, 100));
+        wspr_encode(power1, txMode);
+        TX(freq1);
 
         Utils::println("First WSPR TX done, starting second one");
 
         delay(9000);
 
-        wspr_encode(power2);
-        TX(freq);
+        uint64_t freq2 = WSPR_FREQ20m + (100ULL * random(-100, 100));
+        wspr_encode(power2, txMode);
+        TX(freq2);
 
         Utils::println("---> WSPR TX DONE");
     }
