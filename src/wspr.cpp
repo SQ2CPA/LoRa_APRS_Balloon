@@ -17,6 +17,8 @@ uint8_t txBuffer[WSPR_SYMBOL_COUNT];
 
 extern Configuration Config;
 
+bool isSIAvailable = true;
+
 namespace WSPR_Utils
 {
     void setup()
@@ -42,9 +44,7 @@ namespace WSPR_Utils
 
         Serial.println("Si5351 not Detected at adress 98. There is no Si5351!");
 
-        while (1)
-        {
-        }
+        isSIAvailable = false;
     }
 
     void setRegister(uint8_t reg, uint8_t data)
@@ -57,6 +57,9 @@ namespace WSPR_Utils
 
     void disableTX()
     {
+        if (!isSIAvailable)
+            return;
+
         setRegister(SI_CLK0_CONTROL, 0x80);
     }
 
@@ -516,6 +519,11 @@ namespace WSPR_Utils
         }
 
         disableTX();
+    }
+
+    bool isAvailable()
+    {
+        return isSIAvailable;
     }
 
     void sendWSPR(int txMode)

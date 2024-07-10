@@ -116,8 +116,12 @@ void setup()
 
     // Historical_location::write(""); // DEBUG ONLY
 
+#ifdef WSPR
     WSPR_Utils::setup();
-    WSPR_Utils::disableTX();
+
+    if (WSPR_Utils::isAvailable())
+        WSPR_Utils::disableTX();
+#endif
 }
 
 int rxPackets = 0;
@@ -164,7 +168,7 @@ void loop()
     if (currentDay != -1)
         Config.beacon.comment += "D" + String(currentDay);
 
-    Config.beacon.comment += "N21";
+    Config.beacon.comment += "N22";
     Config.beacon.comment += " ";
 
     // gpsFails = 0; // DEBUG ONLY
@@ -239,7 +243,7 @@ void loop()
 
             LoRa_Utils::setOutputPower(outputPower);
 
-            Utils::println("Increase power to: " + String(outputPower));
+            Utils::println("Increased power to: " + String(outputPower));
         }
     }
 
@@ -303,23 +307,28 @@ void loop()
         Historical_location::sendToRF();
     }
 
-    if (gps.time.isValid() && Config.beacon.latitude != 0 && Config.beacon.longitude != 0)
+#ifdef WSPR
+    if (WSPR_Utils::isAvailable())
     {
-        // if (WSPR_Utils::isInTimeslot(gps.time.minute(), gps.time.second()))
-        if (gps.time.minute() % 2 != 0)
+        if (gps.time.isValid() && Config.beacon.latitude != 0 && Config.beacon.longitude != 0)
         {
-            Utils::println("Waiting for WSPR timeslot");
+            // if (WSPR_Utils::isInTimeslot(gps.time.minute(), gps.time.second()))
+            if (gps.time.minute() % 2 != 0)
+            {
+                Utils::println("Waiting for WSPR timeslot");
 
-            delay(60000 - (gps.time.centisecond() * 10));
+                delay(60000 - (gps.time.centisecond() * 10));
 
-            WSPR_Utils::prepareWSPR(altitude);
+                WSPR_Utils::prepareWSPR(altitude);
 
-            int txMode = 1;
+                int txMode = 1;
 
-            if (gps.time.minute() == 30)
-                txMode = 0;
+                if (gps.time.minute() == 30)
+                    txMode = 0;
 
-            WSPR_Utils::sendWSPR(txMode);
+                WSPR_Utils::sendWSPR(txMode);
+            }
         }
     }
+#endif
 }

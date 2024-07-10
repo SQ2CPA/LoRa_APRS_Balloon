@@ -65,4 +65,5 @@ namespace WSPR_Utils
     void sendWSPR(int txMode);
     bool isInTimeslot(int minute, int second);
     void disableTX();
+    bool isAvailable();
 }

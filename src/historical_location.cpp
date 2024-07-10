@@ -310,10 +310,20 @@ namespace Historical_location
                 bool doubleLongitude = abs(diffLongitude) > 1;
 
                 if (doubleLatitude)
-                    diffLatitude = diffLatitude > 0 ? diffLatitude-- : diffLatitude++;
+                {
+                    if (diffLatitude > 0)
+                        diffLatitude--;
+                    else
+                        diffLatitude++;
+                }
 
                 if (doubleLongitude)
-                    diffLongitude = diffLongitude > 0 ? diffLongitude-- : diffLongitude++;
+                {
+                    if (diffLongitude > 0)
+                        diffLongitude--;
+                    else
+                        diffLongitude++;
+                }
 
                 makeDiffAndInsert(diffLatitude, diffLongitude, location);
 
