@@ -20,8 +20,8 @@
 #include "wspr.h"
 #include "debug.h"
 
-SoftwareSerial gpsPort(0, 1); // normal
-// SoftwareSerial gpsPort(1, 0); // reversed
+// SoftwareSerial gpsPort(0, 1); // normal
+SoftwareSerial gpsPort(1, 0); // reversed
 TinyGPSPlus gps;
 SFE_UBLOX_GPS sgps;
 
@@ -63,6 +63,8 @@ int beaconNum = 0;
 String beaconPacket;
 int beaconFrequency = 0;
 
+int lastWSPRTx = 0;
+
 void setup()
 {
     Serial.begin(115200);
@@ -101,13 +103,15 @@ void setup()
     // int d = 5000;
     int d = 5000;
 
-    while (millis() - startedAt < d)
+    bool gpsForwarding = false;
+
+    while (millis() - startedAt < d || gpsForwarding)
     {
         while (gpsPort.available() > 0)
         {
             byte b = gpsPort.read();
 
-            if (millis() - startedAt < 2000)
+            if (millis() - startedAt < 2000 || gpsForwarding)
             {
                 Serial.write(b);
             }
@@ -129,6 +133,8 @@ void setup()
 
     if (WSPR_Utils::isAvailable())
         WSPR_Utils::disableTX();
+
+        // WSPR_Utils::debug();
 #endif
 }
 
@@ -197,7 +203,14 @@ void loop()
         }
         else if (gps.time.isValid())
         {
-            Config.beacon.comment += "T ";
+            if (gps.time.second() == 0 && gps.time.minute() == 0 && gps.time.hour() == 0)
+            {
+                Config.beacon.comment += "TNV ";
+            }
+            else
+            {
+                Config.beacon.comment += "TV ";
+            }
         }
     }
 
@@ -208,6 +221,7 @@ void loop()
     int knots = 0;
     int course = 0;
     int altitude = 0;
+    int altitudeInMeters = 0;
 
     if (gps.location.isValid())
     {
@@ -217,9 +231,13 @@ void loop()
         knots = gps.speed.knots();
         course = gps.course.deg();
         altitude = gps.altitude.feet();
+        altitudeInMeters = gps.altitude.meters();
 
         if (altitude < 0)
             altitude = 0;
+
+        if (altitudeInMeters < 0)
+            altitudeInMeters = 0;
     }
     else
     {
@@ -269,6 +287,17 @@ void loop()
             LoRa_Utils::setOutputPower(outputPower);
 
             Utils::println("Increased power to: " + String(outputPower));
+
+            if (gps.time.isValid())
+            {
+                Utils::print("Current time ");
+                Utils::print(String(gps.time.hour()));
+                Utils::print(":");
+                Utils::print(String(gps.time.minute()));
+                Utils::print(":");
+                Utils::print(String(gps.time.second()));
+                Utils::println("");
+            }
         }
     }
 
@@ -288,7 +317,7 @@ void loop()
         }
     }
 
-    bool canWorkWithHistoricalLocation = beaconNum > 50 && altitude > 4000;
+    bool canWorkWithHistoricalLocation = beaconNum > 50 && altitudeInMeters > 4000;
 
     if (canWorkWithHistoricalLocation)
     {
@@ -297,9 +326,11 @@ void loop()
             lastHistoricalLocations = Historical_location::read();
             readHistoricalLocations = true;
 
+            currentDay = 0;
+
             for (int i = 0; i < lastHistoricalLocations.length(); i++)
             {
-                if (lastHistoricalLocations.charAt(i) == ' ')
+                if (lastHistoricalLocations.charAt(i) == ';')
                     currentDay++;
             }
         }
@@ -332,26 +363,38 @@ void loop()
         Historical_location::sendToRF();
     }
 
+    // WSPR DEBUG
+    // Config.beacon.latitude = 53.34449;
+    // Config.beacon.longitude = 17.642012;
+    // altitude = 4000;
+
 #ifdef WSPR
-    if (WSPR_Utils::isAvailable())
+    if (WSPR_Utils::isAvailable() && (lastWSPRTx == 0 || millis() - lastWSPRTx >= 90 * 1000))
     {
-        if (gps.time.isValid() && Config.beacon.latitude != 0 && Config.beacon.longitude != 0)
+        int minute = gps.time.minute();
+        int second = gps.time.second();
+        int centisecond = gps.time.centisecond();
+
+        if (gps.time.isValid() && Config.beacon.latitude != 0 && Config.beacon.longitude != 0 && second != 0 && minute != 0 && gps.time.hour() != 0)
         {
-            // if (WSPR_Utils::isInTimeslot(gps.time.minute(), gps.time.second()))
-            if (gps.time.minute() % 2 != 0)
+            if (WSPR_Utils::isInTimeslot(minute, second))
             {
-                Utils::println("Waiting for WSPR timeslot");
+                Utils::println("Waiting for WSPR timeslot, time: " + String(minute) + ":" + String(second) + " " + String(centisecond));
 
-                delay(60000 - (gps.time.centisecond() * 10));
+                delay(60000 - (second * 1000 + centisecond * 10));
 
-                WSPR_Utils::prepareWSPR(altitude);
+                delay(1000);
 
-                int txMode = 1;
+                WSPR_Utils::prepareWSPR(altitudeInMeters);
 
-                if (gps.time.minute() == 30)
-                    txMode = 0;
+                int txMode = 0;
+
+                if (minute == 8 || minute == 48)
+                    txMode = 1;
 
                 WSPR_Utils::sendWSPR(txMode);
+
+                lastWSPRTx = millis();
             }
         }
     }

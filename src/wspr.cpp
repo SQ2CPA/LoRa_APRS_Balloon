@@ -236,7 +236,7 @@ namespace WSPR_Utils
         }
         locator[i * 2] = 0;
 
-        Serial.println(locator);
+        // Serial.println(locator);
 
         return locator;
     }
@@ -453,6 +453,7 @@ namespace WSPR_Utils
 
     void setFrequency(uint64_t frequency)
     {
+        // uint32_t ReferenceFrequency = 25999980;
         uint32_t ReferenceFrequency = 26000000;
         uint8_t OutputDivider = 1;
         uint8_t rDiv = SI_R_DIV_1;
@@ -489,8 +490,8 @@ namespace WSPR_Utils
 
         setRegister(SI_CLK0_CONTROL, 0x4F | SI_CLK_SRC_PLL_A);
 
-        Serial.print(F("{TFQ} "));
-        Serial.println(uint64ToStr(frequency, false));
+        // Serial.print(F("{TFQ} "));
+        // Serial.println(uint64ToStr(frequency, false));
     }
 
     void prepareWSPR(uint32_t altitude)
@@ -546,9 +547,11 @@ namespace WSPR_Utils
 
     bool isInTimeslot(int minute, int second)
     {
+        // return minute % 2 == 1 && second > 30; // DEBUG
+
         minute++;
 
-        if (minute == 10 || minute == 30 || minute == 50)
+        if (minute == 8 || minute == 28 || minute == 48)
         {
             if (second > 30)
             {
@@ -557,6 +560,15 @@ namespace WSPR_Utils
         }
 
         return false;
+    }
+
+    void debug()
+    {
+        setFrequency(WSPR_FREQ20m + (100ULL * 100));
+
+        while (1)
+        {
+        }
     }
 
 }
