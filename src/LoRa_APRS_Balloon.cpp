@@ -18,6 +18,7 @@
 #include "historical_location.h"
 #include "wspr.h"
 #include "debug.h"
+#include "current_day.h"
 
 #ifdef WSPR
 SoftwareSerial gpsPort(1, 0); // reversed
@@ -67,6 +68,8 @@ String beaconPacket;
 int beaconFrequency = 0;
 
 int lastWSPRTx = 0;
+
+int currentDay = -1;
 
 void setup()
 {
@@ -181,6 +184,9 @@ void loop()
 
     // if (outputPower < 20)
     Config.beacon.comment += "O" + String(outputPower);
+
+    if (currentDay > -1)
+        Config.beacon.comment += "D" + String(currentDay);
 
     Config.beacon.comment += "N23";
 
@@ -321,6 +327,10 @@ void loop()
         {
             lastHistoricalLocations = Historical_location::read();
             readHistoricalLocations = true;
+
+            currentDay = Current_Day::read() + 1;
+
+            Current_Day::write(currentDay);
         }
 
         uint32_t lastCheck = millis() - lastHistoricalLocationsCheck;
