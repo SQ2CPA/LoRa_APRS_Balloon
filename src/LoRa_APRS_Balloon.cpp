@@ -20,7 +20,7 @@
 #include "debug.h"
 
 #ifdef WSPR
-// SoftwareSerial gpsPort(1, 0); // reversed
+SoftwareSerial gpsPort(1, 0); // reversed
 #else
 SoftwareSerial gpsPort(0, 1); // normal
 #endif
