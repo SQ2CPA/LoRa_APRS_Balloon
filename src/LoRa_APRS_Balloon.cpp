@@ -19,8 +19,12 @@
 #include "wspr.h"
 #include "debug.h"
 
-// SoftwareSerial gpsPort(0, 1); // normal
-SoftwareSerial gpsPort(1, 0); // reversed
+#ifdef WSPR
+// SoftwareSerial gpsPort(1, 0); // reversed
+#else
+SoftwareSerial gpsPort(0, 1); // normal
+#endif
+
 TinyGPSPlus gps;
 SFE_UBLOX_GPS sgps;
 
@@ -54,7 +58,7 @@ int historicalLocationsFrequency = 0;
 std::vector<ReceivedPacket> receivedPackets;
 
 #ifdef DEBUG
-int beaconNum = 50;
+int beaconNum = 45;
 #else
 int beaconNum = 0;
 #endif
@@ -151,8 +155,6 @@ bool readHistoricalLocations = false;
 int okFrames = 0;
 int outputPower = 15;
 
-int currentDay = -1;
-
 void loop()
 {
     while (gpsPort.available() > 0)
@@ -180,9 +182,6 @@ void loop()
     // if (outputPower < 20)
     Config.beacon.comment += "O" + String(outputPower);
 
-    if (currentDay != -1)
-        Config.beacon.comment += "D" + String(currentDay);
-
     Config.beacon.comment += "N23";
 
     if (WSPR_Utils::isAvailable())
@@ -204,11 +203,11 @@ void loop()
         {
             if (gps.time.second() == 0 && gps.time.minute() == 0 && gps.time.hour() == 0)
             {
-                Config.beacon.comment += "TNV ";
+                Config.beacon.comment += "T- ";
             }
             else
             {
-                Config.beacon.comment += "TV ";
+                Config.beacon.comment += "T+ ";
             }
         }
     }
@@ -310,6 +309,10 @@ void loop()
         }
     }
 
+#ifdef DEBUG
+    altitudeInMeters = 4001;
+#endif
+
     bool canWorkWithHistoricalLocation = beaconNum > 50 && altitudeInMeters > 4000;
 
     if (canWorkWithHistoricalLocation)
@@ -318,14 +321,6 @@ void loop()
         {
             lastHistoricalLocations = Historical_location::read();
             readHistoricalLocations = true;
-
-            currentDay = 0;
-
-            for (int i = 0; i < lastHistoricalLocations.length(); i++)
-            {
-                if (lastHistoricalLocations.charAt(i) == ';')
-                    currentDay++;
-            }
         }
 
         uint32_t lastCheck = millis() - lastHistoricalLocationsCheck;
@@ -356,12 +351,12 @@ void loop()
         Historical_location::sendToRF();
     }
 
+#ifdef WSPR
     // WSPR DEBUG
     // Config.beacon.latitude = 53.34449;
     // Config.beacon.longitude = 17.642012;
     // altitude = 1250;
 
-#ifdef WSPR
     if (WSPR_Utils::isAvailable() && (lastWSPRTx == 0 || millis() - lastWSPRTx >= 90 * 1000))
     {
         int minute = gps.time.minute();
