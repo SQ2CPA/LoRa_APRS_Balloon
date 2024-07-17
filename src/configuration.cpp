@@ -47,6 +47,9 @@ void Configuration::writeFile()
     data["ota"]["username"] = ota.username;
     data["ota"]["password"] = ota.password;
 
+    data["wspr"]["callsign"] = wspr.callsign;
+    data["wspr"]["ssid"] = wspr.ssid;
+
     serializeJson(data, configFile);
 
     configFile.close();
@@ -107,6 +110,9 @@ bool Configuration::readFile()
         loramodule.txActive = data["lora"]["txActive"].as<bool>();
         loramodule.rxActive = data["lora"]["rxActive"].as<bool>();
 
+        wspr.callsign = data["wspr"]["callsign"].as<String>();
+        wspr.ssid = data["wspr"]["ssid"].as<int>();
+
         if (wifiAPs.size() == 0)
         { // If we don't have any WiFi's from config we need to add "empty" SSID for AUTO AP
             WiFi_AP wifiap;
@@ -137,6 +143,9 @@ void Configuration::init()
     wifiAutoAP.powerOff = 15;
 
     callsign = "N0CALL";
+
+    wspr.callsign = "N0CALL";
+    wspr.ssid = 1;
 
     beacon.comment = "LoRa APRS Balloon";
     beacon.latitude = 0.0;

@@ -54,6 +54,13 @@ public:
     String password;
 };
 
+class WSPR
+{
+public:
+    String callsign;
+    int ssid;
+};
+
 class Configuration
 {
 public:
@@ -68,6 +75,7 @@ public:
     DIGI digi;
     LoraModule loramodule;
     OTA ota;
+    WSPR wspr;
 
     void init();
     void writeFile();

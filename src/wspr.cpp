@@ -248,6 +248,14 @@ namespace WSPR_Utils
         uint8_t Length = strlen(call);
         strcpy(CallWithSuPrefix, call);
 
+        if (Config.wspr.ssid > 0)
+        {
+            CallWithSuPrefix[Length] = '/';
+
+            CallWithSuPrefix[Length + 1] = '0' + Config.wspr.ssid;
+            CallWithSuPrefix[Length + 2] = 0;
+        }
+
         Length = strlen(CallWithSuPrefix);
 
         a = b = c = 0xdeadbeef + Length + 146;
@@ -310,21 +318,43 @@ namespace WSPR_Utils
         return c;
     }
 
-    void wspr_encode(uint8_t power, int txMode) // TXMODE 0 = normal, 1 = compressed with 6 chars locator
+    uint8_t encodeChar(char Character)
+    {
+        uint8_t ConvertedNumber;
+        if (Character == ' ')
+        {
+            ConvertedNumber = 36;
+        }
+        else
+        {
+            if (isdigit(Character))
+            {
+                ConvertedNumber = Character - '0';
+            }
+            else
+            {
+                ConvertedNumber = 10 + (Character - 'A');
+            }
+        }
+        return ConvertedNumber;
+    }
+
+    void wspr_encode(uint8_t power, int txMode) // TXMODE 1 = normal, 3 = compressed with 6 chars locator
     {
         memset(txBuffer, 0, sizeof(txBuffer));
 
         char callsign[7] = {' ', ' ', ' ', ' ', ' ', ' ', 0};
 
         for (int i = 0; i < 6; i++)
-            callsign[i] = Config.callsign.charAt(i);
+            callsign[i] = Config.wspr.callsign.charAt(i);
 
         char *locator = getLocator(Config.beacon.latitude, Config.beacon.longitude, 6);
 
         uint32_t n, m;
 
-        if (txMode == 1)
+        switch (txMode)
         {
+        case 3:
             n = wspr_code(locator[1]);
             n = n * 36 + wspr_code(locator[2]);
             n = n * 10 + wspr_code(locator[3]);
@@ -332,9 +362,19 @@ namespace WSPR_Utils
             n = n * 27 + (wspr_code(locator[5]) - 10);
             n = n * 27 + (wspr_code(locator[0]) - 10);
             m = 128 * wspr_call_hash(callsign) - power - 1 + 64;
-        }
-        else
-        {
+            break;
+        case 2:
+            n = wspr_code(callsign[0]);
+            n = n * 36 + wspr_code(callsign[1]);
+            n = n * 10 + wspr_code(callsign[2]);
+            n = n * 27 + (wspr_code(callsign[3]) - 10);
+            n = n * 27 + (wspr_code(callsign[4]) - 10);
+            n = n * 27 + (wspr_code(callsign[5]) - 10);
+
+            m = (27232 + Config.wspr.ssid);
+            m = (m * 128) + power + 2 + 64;
+            break;
+        default:
             n = wspr_code(callsign[0]);
             n = n * 36 + wspr_code(callsign[1]);
             n = n * 10 + wspr_code(callsign[2]);
@@ -344,6 +384,7 @@ namespace WSPR_Utils
 
             m = ((179 - 10 * (locator[0] - 'A') - (locator[2] - '0')) * 180) + (10 * (locator[1] - 'A')) + (locator[3] - '0');
             m = (m * 128) + power + 64;
+            break;
         }
 
         uint8_t c[11];
@@ -524,14 +565,19 @@ namespace WSPR_Utils
         return isSIAvailable;
     }
 
-    void sendWSPR(int txMode)
+    void sendWSPR()
     {
         Utils::println("---> WSPR TX START");
 
         disableTX();
 
         uint64_t freq1 = WSPR_FREQ20m + (100ULL * random(-100, 100));
-        wspr_encode(power1, txMode);
+
+        if (Config.wspr.ssid > 0)
+            wspr_encode(power1, 2);
+        else
+            wspr_encode(power1, 1);
+
         TX(freq1);
 
         Utils::println("First WSPR TX done, starting second one");
@@ -539,7 +585,7 @@ namespace WSPR_Utils
         delay(9000);
 
         uint64_t freq2 = WSPR_FREQ20m + (100ULL * random(-100, 100));
-        wspr_encode(power2, txMode);
+        wspr_encode(power2, 3);
         TX(freq2);
 
         Utils::println("---> WSPR TX DONE");

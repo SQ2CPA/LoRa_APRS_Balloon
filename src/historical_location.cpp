@@ -76,6 +76,11 @@ namespace Historical_location
         int latitude = int(Config.beacon.latitude);
         int longitude = int(Config.beacon.longitude);
 
+        if (latitude < 0)
+            location += "-";
+        else
+            location += "+";
+
         if (latitude < 10)
         {
             location += "0" + String(latitude);
@@ -84,6 +89,11 @@ namespace Historical_location
         {
             location += String(latitude);
         }
+
+        if (longitude < 0)
+            location += "-";
+        else
+            location += "+";
 
         if (longitude < 10)
         {
@@ -115,7 +125,9 @@ namespace Historical_location
 
             String historicalLocations = lastHistoricalLocations;
 
-            while (historicalLocations != "")
+            bool abort = false;
+
+            while (historicalLocations != "" && !abort)
             {
                 int mode = -1;
 
@@ -125,16 +137,25 @@ namespace Historical_location
                 }
                 else
                 {
-                    String x = historicalLocations.substring(2, 4);
-
-                    if (x.indexOf("+") != -1 || x.indexOf("-") != -1 || x.indexOf("00") != -1)
-                    {
-                        mode = 2;
-                    }
-                    else
+                    if ((historicalLocations.charAt(0) == '+' || historicalLocations.charAt(0) == '-') && (historicalLocations.charAt(4) == '+' || historicalLocations.charAt(4) == '-'))
                     {
                         mode = 1;
                     }
+                    else
+                    {
+                        mode = 2;
+                    }
+
+                    // String x = historicalLocations.substring(2, 4);
+
+                    // if (x.indexOf("+") != -1 || x.indexOf("-") != -1 || x.indexOf("00") != -1)
+                    // {
+                    //     mode = 2;
+                    // }
+                    // else
+                    // {
+                    //     mode = 1;
+                    // }
                 }
 
                 switch (mode)
@@ -145,9 +166,9 @@ namespace Historical_location
                     historicalLocations = historicalLocations.substring(1);
                     break;
                 case 1: // first location in day
-                    message += historicalLocations.substring(0, 5);
+                    message += historicalLocations.substring(0, 7);
 
-                    historicalLocations = historicalLocations.substring(5);
+                    historicalLocations = historicalLocations.substring(7);
                     break;
                 case 2: // diff location
                     String aLatS = historicalLocations.substring(0, 2);

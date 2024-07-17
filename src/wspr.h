@@ -62,7 +62,7 @@ namespace WSPR_Utils
 {
     void setup();
     void prepareWSPR(uint32_t altitude);
-    void sendWSPR(int txMode);
+    void sendWSPR();
     bool isInTimeslot(int minute, int second);
     void disableTX();
     void debug();

@@ -10,7 +10,6 @@
 #include "gps_utils.h"
 #include "web_utils.h"
 #include "utils.h"
-#include <ElegantOTA.h>
 #include "battery_utils.h"
 #include <HWCDC.h>
 #include <SoftwareSerial.h>
@@ -184,7 +183,7 @@ void loop()
     if (currentDay != -1)
         Config.beacon.comment += "D" + String(currentDay);
 
-    Config.beacon.comment += "N22";
+    Config.beacon.comment += "N23";
 
     if (WSPR_Utils::isAvailable())
         Config.beacon.comment += "W";
@@ -256,12 +255,6 @@ void loop()
 #endif
 
     // WIFI_Utils::checkIfAutoAPShouldPowerOff();
-
-    if (isUpdatingOTA)
-    {
-        ElegantOTA.loop();
-        return;
-    }
 
     // WIFI_Utils::checkWiFi();
     // Utils::checkWiFiInterval();
@@ -366,7 +359,7 @@ void loop()
     // WSPR DEBUG
     // Config.beacon.latitude = 53.34449;
     // Config.beacon.longitude = 17.642012;
-    // altitude = 4000;
+    // altitude = 1250;
 
 #ifdef WSPR
     if (WSPR_Utils::isAvailable() && (lastWSPRTx == 0 || millis() - lastWSPRTx >= 90 * 1000))
@@ -387,12 +380,7 @@ void loop()
 
                 WSPR_Utils::prepareWSPR(altitudeInMeters);
 
-                int txMode = 0;
-
-                if (minute == 8 || minute == 48)
-                    txMode = 1;
-
-                WSPR_Utils::sendWSPR(txMode);
+                WSPR_Utils::sendWSPR();
 
                 lastWSPRTx = millis();
             }
