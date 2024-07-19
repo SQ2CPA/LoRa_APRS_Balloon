@@ -1,5 +1,9 @@
 {
     "callsign": "N0CALL-11",
+    "wspr": {
+        "callsign": "N0CALL",
+        "ssid": 1
+    },
     "wifi": {
         "autoAP": {
             "password": "1234567890",
@@ -20,12 +24,8 @@
         "mode": 2
     },
     "lora": {
-        "txFreq": 434855000,
-        "rxFreq": 436050000,
-        "spreadingFactor": 9,
-        "signalBandwidth": 125000,
-        "codingRate4": 7,
-        "power": 20,
+        "rxFreq": 436.05,
+        "rxSpeed": "1200",
         "txActive": true,
         "rxActive": true
     },
