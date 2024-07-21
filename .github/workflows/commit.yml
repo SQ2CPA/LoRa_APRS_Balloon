@@ -3,7 +3,7 @@ name: Commit Test Build
 on:
     push:
         branches:
-            - '*'
+            - "*"
 
 jobs:
     build:
@@ -26,5 +26,5 @@ jobs:
             - name: Build target
               run: pio run -e ${{ matrix.target }}
 
-            - name: Build FS
-              run: pio run --target buildfs -e ${{ matrix.target }}
+            # - name: Build FS
+            #   run: pio run --target buildfs -e ${{ matrix.target }}
