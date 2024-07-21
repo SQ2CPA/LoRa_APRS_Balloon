@@ -41,8 +41,8 @@ namespace LoRa_Utils
         else
         {
             Utils::println("Starting LoRa failed! Code: " + String(state));
-            while (true)
-                ;
+            delay(60000);
+            ESP.restart();
         }
 #ifdef HAS_SX127X
         radio.setDio0Action(setFlag, RISING);
@@ -90,8 +90,8 @@ namespace LoRa_Utils
         else
         {
             Utils::println("Starting LoRa failed!");
-            while (true)
-                ;
+            delay(60000);
+            ESP.restart();
         }
     }
 

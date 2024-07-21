@@ -130,9 +130,7 @@ namespace Historical_location
 
             String historicalLocations = lastHistoricalLocations;
 
-            bool abort = false;
-
-            while (historicalLocations != "" && !abort)
+            while (historicalLocations != "")
             {
                 int mode = -1;
 
