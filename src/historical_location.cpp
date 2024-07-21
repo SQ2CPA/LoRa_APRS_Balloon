@@ -1,9 +1,11 @@
 #include "historical_location.h"
-#include <SPIFFS.h>
 #include "utils.h"
 #include "configuration.h"
 #include "lora_utils.h"
 #include "pins_config.h"
+#include <Preferences.h>
+
+extern Preferences preferences;
 
 extern double latitude;
 extern double longitude;
@@ -21,30 +23,12 @@ namespace Historical_location
 
     String read()
     {
-        File file = SPIFFS.open("/historical.txt", FILE_READ);
-
-        if (!file)
-        {
-            return "";
-        }
-
-        String data = file.readString();
-
-        file.close();
-
-        return data;
+        return preferences.getString("historical_location", "");
     }
 
     void write(String historicalLocations)
     {
-        File file = SPIFFS.open("/historical.txt", FILE_WRITE);
-        if (!file)
-        {
-            return;
-        }
-
-        file.print(historicalLocations);
-        file.close();
+        preferences.putString("historical_location", historicalLocations);
     }
 
     int encode(int arg1, int arg2, int arg3, int arg4)

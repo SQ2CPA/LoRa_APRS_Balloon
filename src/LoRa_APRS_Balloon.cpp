@@ -7,7 +7,6 @@
 #include "digi_utils.h"
 #include "gps_utils.h"
 #include "utils.h"
-#include <HWCDC.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 #include <SparkFun_Ublox_Arduino_Library.h>
@@ -15,7 +14,7 @@
 #include "wspr.h"
 #include "debug.h"
 #include "current_day.h"
-#include <SPIFFS.h>
+#include <Preferences.h>
 
 #ifdef CONFIG_WSPR_ENABLE
 SoftwareSerial gpsPort(1, 0); // reversed
@@ -49,6 +48,8 @@ int currentDay = -1;
 
 bool canUseStorage = false;
 
+Preferences preferences;
+
 void setup()
 {
     Serial.begin(115200);
@@ -74,20 +75,31 @@ void setup()
     Serial.print(CONFIG_ESP32C3_BROWNOUT_DET_LVL);
     Serial.print("\n\n");
 
+#ifdef CONFIG_GPS_FORWARD_TO_SERIAL
+    while (true)
+    {
+        if (gpsPort.available() > 0)
+        {
+            byte b = gpsPort.read();
+
+            Serial.write(b);
+        }
+
+        delay(250);
+    }
+#endif
+
     unsigned long startedAt = millis();
 
-    // int d = 5000;
     int d = 5000;
 
-    bool gpsForwarding = false;
-
-    while (millis() - startedAt < d || gpsForwarding)
+    while (millis() - startedAt < d)
     {
         while (gpsPort.available() > 0)
         {
             byte b = gpsPort.read();
 
-            if (millis() - startedAt < 2000 || gpsForwarding)
+            if (millis() - startedAt < 2000)
             {
                 Serial.write(b);
             }
@@ -113,8 +125,15 @@ void setup()
         // WSPR_Utils::debug();
 #endif
 
-    if (SPIFFS.begin(false))
+    if (preferences.begin("my-app", false))
+    {
         canUseStorage = true;
+        Serial.println("Preferences mounted successfully");
+    }
+    else
+    {
+        Serial.println("Preferences mount failed!!");
+    }
 }
 
 int rxPackets = 0;
