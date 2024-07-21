@@ -6,8 +6,10 @@
 namespace Current_Day
 {
 
-    int read();
+    void read();
     void write(int day);
+    void setIfNotSet(uint32_t date);
+    void getDays(uint32_t date);
 }
 
 #endif

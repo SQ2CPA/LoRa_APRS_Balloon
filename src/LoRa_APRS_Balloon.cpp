@@ -311,21 +311,24 @@ void loop()
     altitudeInMeters = 4001;
 #endif
 
-#ifdef CONFIG_HISTORICAL_LOCATION_ENABLE
-    bool canWorkWithHistoricalLocation = beaconNum > 50 && altitudeInMeters > 4000;
+#ifdef CONFIG_CURRENT_DAY_ENABLE
+    if (beaconNum > 50 && altitudeInMeters > 2000 && canUseStorage)
+    {
+        Current_Day::read();
 
-    if (canWorkWithHistoricalLocation && canUseStorage)
+        Current_Day::setIfNotSet(gps.date.value());
+
+        Current_Day::getDays(gps.date.value());
+    }
+#endif
+
+#ifdef CONFIG_HISTORICAL_LOCATION_ENABLE
+    if (beaconNum > 50 && altitudeInMeters > 2000 && canUseStorage)
     {
         if (!readHistoricalLocations)
         {
             lastHistoricalLocations = Historical_location::read();
             readHistoricalLocations = true;
-
-#ifdef CONFIG_CURRENT_DAY_ENABLE
-            currentDay = Current_Day::read() + 1;
-
-            Current_Day::write(currentDay);
-#endif
         }
 
         uint32_t lastCheck = millis() - lastHistoricalLocationsCheck;
@@ -353,7 +356,6 @@ void loop()
 
     if (lastHistoricalLocations != "")
         Historical_location::sendToRF();
-
 #endif
 
 #ifdef CONFIG_WSPR_ENABLE
