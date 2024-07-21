@@ -15,9 +15,12 @@ uint8_t power1, power2;
 
 uint8_t txBuffer[WSPR_SYMBOL_COUNT];
 
-extern Configuration Config;
+extern double latitude;
+extern double longitude;
 
 bool isSIAvailable = false;
+
+int currentBand = 0;
 
 namespace WSPR_Utils
 {
@@ -248,13 +251,15 @@ namespace WSPR_Utils
         uint8_t Length = strlen(call);
         strcpy(CallWithSuPrefix, call);
 
-        if (Config.wspr.ssid > 0)
+#ifdef CONFIG_WSPR_SSID
+        if (CONFIG_WSPR_SSID > 0)
         {
             CallWithSuPrefix[Length] = '/';
 
-            CallWithSuPrefix[Length + 1] = '0' + Config.wspr.ssid;
+            CallWithSuPrefix[Length + 1] = '0' + CONFIG_WSPR_SSID;
             CallWithSuPrefix[Length + 2] = 0;
         }
+#endif
 
         Length = strlen(CallWithSuPrefix);
 
@@ -346,9 +351,9 @@ namespace WSPR_Utils
         char callsign[7] = {' ', ' ', ' ', ' ', ' ', ' ', 0};
 
         for (int i = 0; i < 6; i++)
-            callsign[i] = Config.wspr.callsign.charAt(i);
+            callsign[i] = String(CONFIG_WSPR_CALLSIGN).charAt(i);
 
-        char *locator = getLocator(Config.beacon.latitude, Config.beacon.longitude, 6);
+        char *locator = getLocator(latitude, longitude, 6);
 
         uint32_t n, m;
 
@@ -371,7 +376,7 @@ namespace WSPR_Utils
             n = n * 27 + (wspr_code(callsign[4]) - 10);
             n = n * 27 + (wspr_code(callsign[5]) - 10);
 
-            m = (27232 + Config.wspr.ssid);
+            m = (27232 + CONFIG_WSPR_SSID);
             m = (m * 128) + power + 2 + 64;
             break;
         default:
@@ -565,15 +570,42 @@ namespace WSPR_Utils
         return isSIAvailable;
     }
 
-    void sendWSPR()
+    void sendWSPR(int minute)
     {
         Utils::println("---> WSPR TX START");
 
         disableTX();
 
-        uint64_t freq1 = WSPR_FREQ20m + (100ULL * random(-100, 100));
+        uint64_t freq = 0;
 
-        if (Config.wspr.ssid > 0)
+        String band = "";
+
+        switch (minute)
+        {
+        case 8:
+            freq = WSPR_FREQ20m;
+            band = "20m";
+            break;
+        case 28:
+            freq = WSPR_FREQ30m;
+            band = "30m";
+            break;
+        case 48:
+            freq = WSPR_FREQ15m;
+            band = "15m";
+            break;
+        default:
+            freq = WSPR_FREQ20m;
+            band = "20m";
+            break;
+        }
+
+        Utils::print("WSPR band for TX: ");
+        Utils::println(band);
+
+        uint64_t freq1 = freq + (100ULL * random(-100, 100));
+
+        if (CONFIG_WSPR_SSID > 0)
             wspr_encode(power1, 2);
         else
             wspr_encode(power1, 1);
@@ -584,7 +616,7 @@ namespace WSPR_Utils
 
         delay(9000);
 
-        uint64_t freq2 = WSPR_FREQ20m + (100ULL * random(-100, 100));
+        uint64_t freq2 = freq + (100ULL * random(-100, 100));
         wspr_encode(power2, 3);
         TX(freq2);
 

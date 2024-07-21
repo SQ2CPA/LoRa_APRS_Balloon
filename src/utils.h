@@ -3,19 +3,11 @@
 
 #include <Arduino.h>
 
-class ReceivedPacket {
-public:
-    long    millis;
-    String  packet;
-    int     RSSI;
-    float     SNR;
-};
-
-namespace Utils {
+namespace Utils
+{
 
     void processStatus();
     bool checkBeaconInterval();
-    void checkWiFiInterval();
     void print(String text);
     void println(String text);
 

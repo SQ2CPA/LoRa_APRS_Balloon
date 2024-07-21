@@ -1,24 +1,18 @@
-#include <WiFi.h>
 #include "configuration.h"
-#include "battery_utils.h"
 #include "pins_config.h"
-#include "wifi_utils.h"
 #include "lora_utils.h"
 #include "gps_utils.h"
 #include "utils.h"
 
-extern Configuration Config;
 extern bool statusAfterBoot;
 extern uint32_t lastBeaconTx;
 extern bool beaconUpdate;
 extern String beaconPacket;
+extern String comment;
 extern int rssi;
 extern float snr;
 extern int freqError;
 extern String distance;
-extern uint32_t lastWiFiCheck;
-extern bool WiFiConnect;
-extern bool WiFiConnected;
 extern int beaconNum;
 extern int beaconFrequency;
 
@@ -27,18 +21,18 @@ namespace Utils
 
     void processStatus()
     {
-        String e = Config.beacon.path;
+        String e = CONFIG_APRS_PATH;
 
         if (e != "")
             e = "," + e;
 
-        String packet = Config.callsign + ">APLRG1" + e;
+        String packet = String(CONFIG_APRS_CALLSIGN) + ">APLRG1" + e;
 
-        if (statusAfterBoot && Config.beacon.sendViaRF)
+        if (statusAfterBoot)
         {
             delay(2000);
 
-            packet += ":>LoRa APRS RX " + String(Config.loramodule.rxFreq, 3) + " @1k2 SKY1-1 DIGI";
+            packet += ":>LoRa APRS RX " + String(CONFIG_LORA_RX_FREQ, 3) + " @1k2 SKY1-1 DIGI";
             LoRa_Utils::changeFreq(434.855, "1200");
             LoRa_Utils::sendNewPacket(packet);
             LoRa_Utils::changeToRX();
@@ -50,7 +44,6 @@ namespace Utils
     bool checkBeaconInterval()
     {
         uint32_t lastTx = millis() - lastBeaconTx;
-        String tBeaconPacket = beaconPacket;
 
         if (lastBeaconTx == 0 || lastTx >= 0.40 * 60 * 1000)
         { // ~25s
@@ -59,42 +52,27 @@ namespace Utils
 
         if (beaconUpdate)
         {
-            tBeaconPacket += Config.beacon.comment;
-
-            // if (Config.sendBatteryVoltage)
-            // {
-            //     tBeaconPacket += " Batt=" + String(BATTERY_Utils::checkBattery(), 2) + "V";
-            // }
-
-            // if (Config.externalVoltageMeasurement)
-            // {
-            //     tBeaconPacket += " Ext=" + String(BATTERY_Utils::checkExternalVoltage(), 2) + "V";
-            // }
-
-            if (Config.beacon.sendViaRF)
+            switch (beaconFrequency)
             {
-                switch (beaconFrequency)
-                {
-                case 1:
-                    Utils::println("-- Sending Beacon [434.855] --");
+            case 1:
+                Utils::println("-- Sending Beacon [434.855] --");
 
-                    LoRa_Utils::changeFreq(434.855, "1200");
-                    break;
-                case 2:
-                    Utils::println("-- Sending Beacon [433.775] --");
+                LoRa_Utils::changeFreq(434.855, "1200");
+                break;
+            case 2:
+                Utils::println("-- Sending Beacon [433.775] --");
 
-                    LoRa_Utils::changeFreq(433.775, "300");
-                    break;
-                case 0:
-                    Utils::println("-- Sending Beacon [439.9125] --");
+                LoRa_Utils::changeFreq(433.775, "300");
+                break;
+            case 0:
+                Utils::println("-- Sending Beacon [439.9125] --");
 
-                    LoRa_Utils::changeFreq(439.9125, "300");
-                    break;
-                }
-
-                LoRa_Utils::sendNewPacket(tBeaconPacket);
-                LoRa_Utils::changeToRX();
+                LoRa_Utils::changeFreq(439.9125, "300");
+                break;
             }
+
+            LoRa_Utils::sendNewPacket(beaconPacket + comment);
+            LoRa_Utils::changeToRX();
 
             lastBeaconTx = millis();
             beaconUpdate = false;
@@ -111,22 +89,6 @@ namespace Utils
             processStatus();
 
         return false;
-    }
-
-    void checkWiFiInterval()
-    {
-        uint32_t WiFiCheck = millis() - lastWiFiCheck;
-        if (WiFi.status() != WL_CONNECTED && WiFiCheck >= 15 * 60 * 1000)
-        {
-            WiFiConnect = true;
-        }
-        if (WiFiConnect)
-        {
-            Serial.println("\nConnecting to WiFi ...");
-            WIFI_Utils::startWiFi();
-            lastWiFiCheck = millis();
-            WiFiConnect = false;
-        }
     }
 
     void print(String text)

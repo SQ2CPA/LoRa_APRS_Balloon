@@ -1,16 +1,12 @@
 #include <Arduino.h>
-#include <WiFi.h>
 #include <vector>
 #include "configuration.h"
 #include "pins_config.h"
 #include "query_utils.h"
 #include "lora_utils.h"
-#include "wifi_utils.h"
 #include "digi_utils.h"
 #include "gps_utils.h"
-#include "web_utils.h"
 #include "utils.h"
-#include "battery_utils.h"
 #include <HWCDC.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
@@ -19,8 +15,9 @@
 #include "wspr.h"
 #include "debug.h"
 #include "current_day.h"
+#include <SPIFFS.h>
 
-#ifdef WSPR
+#ifdef CONFIG_WSPR_ENABLE
 SoftwareSerial gpsPort(1, 0); // reversed
 #else
 SoftwareSerial gpsPort(0, 1); // normal
@@ -29,36 +26,17 @@ SoftwareSerial gpsPort(0, 1); // normal
 TinyGPSPlus gps;
 SFE_UBLOX_GPS sgps;
 
-Configuration Config;
-
-uint8_t myWiFiAPIndex = 0;
-int myWiFiAPSize = Config.wifiAPs.size();
-WiFi_AP *currentWiFi = &Config.wifiAPs[myWiFiAPIndex];
-
-bool isUpdatingOTA = false;
 bool statusAfterBoot = true;
 bool beaconUpdate = true;
+
 uint32_t lastBeaconTx = 0;
-uint32_t previousWiFiMillis = 0;
-
-uint32_t lastWiFiCheck = 0;
-bool WiFiConnect = true;
-bool WiFiConnected = false;
-
-bool WiFiAutoAPStarted = false;
-long WiFiAutoAPTime = false;
-
-uint32_t lastBatteryCheck = 0;
-
-String batteryVoltage;
+uint32_t lastWSPRTx = 0;
+uint32_t lastHistoricalLocationsTx = 0;
 
 uint32_t lastHistoricalLocationsCheck = 0;
-uint32_t lastHistoricalLocationsTx = 0;
 int historicalLocationsFrequency = 0;
 
-std::vector<ReceivedPacket> receivedPackets;
-
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG_ENABLE
 int beaconNum = 45;
 #else
 int beaconNum = 0;
@@ -67,9 +45,9 @@ int beaconNum = 0;
 String beaconPacket;
 int beaconFrequency = 0;
 
-int lastWSPRTx = 0;
-
 int currentDay = -1;
+
+bool canUseStorage = false;
 
 void setup()
 {
@@ -84,17 +62,9 @@ void setup()
     pinMode(internalLedPin, OUTPUT);
 #endif
 
-    if (Config.externalVoltageMeasurement)
-    {
-        pinMode(Config.externalVoltagePin, INPUT);
-    }
-
     delay(1000);
 
     LoRa_Utils::setup();
-
-    // WIFI_Utils::setup();
-    // WEB_Utils::setup();
 
     Serial.print("Brownout: ");
     Serial.print(CONFIG_ESP32C3_BROWNOUT_DET);
@@ -130,11 +100,11 @@ void setup()
 
     Serial.print("\n\n");
 
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG_ENABLE
     Historical_location::write("");
 #endif
 
-#ifdef WSPR
+#ifdef CONFIG_WSPR_ENABLE
     WSPR_Utils::setup();
 
     if (WSPR_Utils::isAvailable())
@@ -142,6 +112,9 @@ void setup()
 
         // WSPR_Utils::debug();
 #endif
+
+    if (SPIFFS.begin(false))
+        canUseStorage = true;
 }
 
 int rxPackets = 0;
@@ -158,14 +131,16 @@ bool readHistoricalLocations = false;
 int okFrames = 0;
 int outputPower = 15;
 
+String comment = "";
+double latitude = 0, longitude = 0;
+
 void loop()
 {
     while (gpsPort.available() > 0)
     {
-        byte b = gpsPort.read();
+        byte data = gpsPort.read();
 
-        // Serial.write(b);
-        gps.encode(b);
+        gps.encode(data);
     }
 
     if (gpsFails >= 10)
@@ -177,25 +152,28 @@ void loop()
         ESP.restart();
     }
 
-    Config.beacon.comment = "P" + String(beaconNum);
-    Config.beacon.comment += "S" + String(gps.satellites.value());
-    Config.beacon.comment += "F" + String(gpsFails);
-    Config.beacon.comment += "R" + String(rxPackets);
+    comment = "P" + String(beaconNum);
+    comment += "S" + String(gps.satellites.value());
+    comment += "F" + String(gpsFails);
+    comment += "R" + String(rxPackets);
 
-    // if (outputPower < 20)
-    Config.beacon.comment += "O" + String(outputPower);
+    if (outputPower < 20)
+        comment += "O" + String(outputPower);
 
     if (currentDay > -1)
-        Config.beacon.comment += "D" + String(currentDay);
+        comment += "D" + String(currentDay);
 
-    Config.beacon.comment += "N23";
+    comment += "N" + String(CONFIG_APRS_FLIGHT_ID);
 
     if (WSPR_Utils::isAvailable())
-        Config.beacon.comment += "W";
+        comment += "W";
 
-    Config.beacon.comment += " ";
+    if (canUseStorage)
+        comment += "S";
 
-#ifdef DEBUG
+    comment += " ";
+
+#ifdef CONFIG_DEBUG_ENABLE
     gpsFails = 0;
 #endif
 
@@ -203,23 +181,23 @@ void loop()
     {
         if (gps.location.isValid())
         {
-            Config.beacon.comment += "2D ";
+            comment += "2D ";
         }
         else if (gps.time.isValid())
         {
             if (gps.time.second() == 0 && gps.time.minute() == 0 && gps.time.hour() == 0)
             {
-                Config.beacon.comment += "T- ";
+                comment += "T- ";
             }
             else
             {
-                Config.beacon.comment += "T+ ";
+                comment += "T+ ";
             }
         }
     }
 
-#ifdef DEBUG
-    Config.beacon.comment += "DEBUG";
+#ifdef CONFIG_DEBUG_ENABLE
+    comment += "DEBUG";
 #endif
 
     int knots = 0;
@@ -229,8 +207,8 @@ void loop()
 
     if (gps.location.isValid())
     {
-        Config.beacon.latitude = gps.location.lat();
-        Config.beacon.longitude = gps.location.lng();
+        latitude = gps.location.lat();
+        longitude = gps.location.lng();
 
         knots = gps.speed.knots();
         course = gps.course.deg();
@@ -245,24 +223,19 @@ void loop()
     }
     else
     {
-        Config.beacon.latitude = 0;
-        Config.beacon.longitude = 0;
+        latitude = 0;
+        longitude = 0;
     }
 
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG_ENABLE
     beaconPacket = GPS_Utils::generateBeacon(0, 0, 0, 0, 0);
 
     altitude = 10000;
 
     DEBUG_Utils::setDummyLocation();
 #else
-    beaconPacket = GPS_Utils::generateBeacon(Config.beacon.latitude, Config.beacon.longitude, knots, course, altitude);
+    beaconPacket = GPS_Utils::generateBeacon(latitude, longitude, knots, course, altitude);
 #endif
-
-    // WIFI_Utils::checkIfAutoAPShouldPowerOff();
-
-    // WIFI_Utils::checkWiFi();
-    // Utils::checkWiFiInterval();
 
     if (Utils::checkBeaconInterval())
     {
@@ -300,42 +273,45 @@ void loop()
     }
 
     String packet = "";
-    if (Config.loramodule.rxActive)
-    {
-        packet = LoRa_Utils::receivePacket();
-    }
+
+#ifdef CONFIG_LORA_RX_ACTIVE
+    packet = LoRa_Utils::receivePacket();
+#endif
 
     if (packet != "")
     {
         rxPackets++;
 
-        if (Config.digi.mode == 2)
+        if (CONFIG_APRS_DIGI_MODE == 2)
         {
             DIGI_Utils::loop(packet);
         }
     }
 
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG_ENABLE
     altitudeInMeters = 4001;
 #endif
 
+#ifdef CONFIG_HISTORICAL_LOCATION_ENABLE
     bool canWorkWithHistoricalLocation = beaconNum > 50 && altitudeInMeters > 4000;
 
-    if (canWorkWithHistoricalLocation)
+    if (canWorkWithHistoricalLocation && canUseStorage)
     {
         if (!readHistoricalLocations)
         {
             lastHistoricalLocations = Historical_location::read();
             readHistoricalLocations = true;
 
+#ifdef CONFIG_CURRENT_DAY_ENABLE
             currentDay = Current_Day::read() + 1;
 
             Current_Day::write(currentDay);
+#endif
         }
 
         uint32_t lastCheck = millis() - lastHistoricalLocationsCheck;
 
-        if ((lastHistoricalLocationsCheck == 0 || lastCheck >= 15 * 1000) && Config.beacon.latitude != 0 && Config.beacon.longitude != 0)
+        if ((lastHistoricalLocationsCheck == 0 || lastCheck >= 15 * 1000) && latitude != 0 && longitude != 0)
         {
             lastHistoricalLocationsCheck = millis();
 
@@ -349,7 +325,7 @@ void loop()
                 setTodaysLocationSeparator = true;
             }
 
-            if (int(Config.beacon.latitude) != lastHistoricalLatitude || int(Config.beacon.longitude) != lastHistoricalLongitude)
+            if (int(latitude) != lastHistoricalLatitude || int(longitude) != lastHistoricalLongitude)
             {
                 Historical_location::process(location);
             }
@@ -357,14 +333,14 @@ void loop()
     }
 
     if (lastHistoricalLocations != "")
-    {
         Historical_location::sendToRF();
-    }
 
-#ifdef WSPR
+#endif
+
+#ifdef CONFIG_WSPR_ENABLE
     // WSPR DEBUG
-    // Config.beacon.latitude = 53.34449;
-    // Config.beacon.longitude = 17.642012;
+    // latitude = 53.34449;
+    // longitude = 17.642012;
     // altitude = 1250;
 
     if (WSPR_Utils::isAvailable() && (lastWSPRTx == 0 || millis() - lastWSPRTx >= 90 * 1000))
@@ -373,7 +349,7 @@ void loop()
         int second = gps.time.second();
         int centisecond = gps.time.centisecond();
 
-        if (gps.time.isValid() && Config.beacon.latitude != 0 && Config.beacon.longitude != 0 && second != 0 && minute != 0 && gps.time.hour() != 0)
+        if (gps.time.isValid() && latitude != 0 && longitude != 0 && second != 0 && minute != 0 && gps.time.hour() != 0)
         {
             if (WSPR_Utils::isInTimeslot(minute, second))
             {
@@ -381,11 +357,11 @@ void loop()
 
                 delay(60000 - (second * 1000 + centisecond * 10));
 
-                delay(1000);
+                delay(100);
 
                 WSPR_Utils::prepareWSPR(altitudeInMeters);
 
-                WSPR_Utils::sendWSPR();
+                WSPR_Utils::sendWSPR(minute + 1);
 
                 lastWSPRTx = millis();
             }

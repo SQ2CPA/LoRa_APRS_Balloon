@@ -24,22 +24,19 @@
 
 #define WSPR_SYMBOL_COUNT 162
 
-#define WSPR_FREQ23cm 129650150000ULL // 23cm 1296.501,500MHz (Overtone, not implemented)
-#define WSPR_FREQ70cm 43230150000ULL  // 70cm  432.301,500MHz (Overtone, not implemented)
-#define WSPR_FREQ2m 14449500000ULL    // 2m    144.490,000MHz //Not working. No decode in bench test with WSJT-X decoding Software, The PLL steps are not fine-grained enogh to make it work.
-#define WSPR_FREQ4m 7009250000ULL     // 4m     70.092,500MHz
-#define WSPR_FREQ6m 5029450000ULL     // 6m     50.294,500MHz
-#define WSPR_FREQ10m 2812610000ULL    // 10m    28.126,100MHz
-#define WSPR_FREQ12m 2492610000ULL    // 12m    24.926,100MHz
-#define WSPR_FREQ15m 2109610000ULL    // 15m    21.096.100MHz
-#define WSPR_FREQ17m 1810610000ULL    // 17m    18.106,100MHz
-#define WSPR_FREQ20m 1409710000ULL    // 20m    14.097,100MHz
-#define WSPR_FREQ30m 1014020000ULL    // 30m    10.140,200MHz
-#define WSPR_FREQ40m 704010000ULL     // 40m     7.040,100MHz
-#define WSPR_FREQ80m 357010000ULL     // 80m     3.570,100MHz
-#define WSPR_FREQ160m 183810000ULL    // 160m    1.838,100MHz
-#define WSPR_FREQ630m 47570000ULL     // 630m      475.700kHz
-#define WSPR_FREQ2190m 13750000ULL    // 2190m     137.500kHz
+#define WSPR_FREQ4m 7009250000ULL  // 4m     70.092,500MHz
+#define WSPR_FREQ6m 5029450000ULL  // 6m     50.294,500MHz
+#define WSPR_FREQ10m 2812610000ULL // 10m    28.126,100MHz
+#define WSPR_FREQ12m 2492610000ULL // 12m    24.926,100MHz
+#define WSPR_FREQ15m 2109610000ULL // 15m    21.096.100MHz
+#define WSPR_FREQ17m 1810610000ULL // 17m    18.106,100MHz
+#define WSPR_FREQ20m 1409710000ULL // 20m    14.097,100MHz
+#define WSPR_FREQ30m 1014020000ULL // 30m    10.140,200MHz
+#define WSPR_FREQ40m 704010000ULL  // 40m     7.040,100MHz
+#define WSPR_FREQ80m 357010000ULL  // 80m     3.570,100MHz
+#define WSPR_FREQ160m 183810000ULL // 160m    1.838,100MHz
+#define WSPR_FREQ630m 47570000ULL  // 630m      475.700kHz
+#define WSPR_FREQ2190m 13750000ULL // 2190m     137.500kHz
 
 #define FactorySpace true
 #define UserSpace false
@@ -62,7 +59,7 @@ namespace WSPR_Utils
 {
     void setup();
     void prepareWSPR(uint32_t altitude);
-    void sendWSPR();
+    void sendWSPR(int minute);
     bool isInTimeslot(int minute, int second);
     void disableTX();
     void debug();

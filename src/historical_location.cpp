@@ -5,7 +5,9 @@
 #include "lora_utils.h"
 #include "pins_config.h"
 
-extern Configuration Config;
+extern double latitude;
+extern double longitude;
+
 extern int lastHistoricalLatitude;
 extern int lastHistoricalLongitude;
 
@@ -73,8 +75,8 @@ namespace Historical_location
     {
         String location = "";
 
-        int latitude = int(Config.beacon.latitude);
-        int longitude = int(Config.beacon.longitude);
+        int ilatitude = int(latitude);
+        int ilongitude = int(longitude);
 
         // + + !
         // + - @
@@ -83,30 +85,30 @@ namespace Historical_location
 
         String prefix = "%";
 
-        if (latitude > 0 && longitude > 0)
+        if (ilatitude > 0 && ilongitude > 0)
             prefix = "!";
-        else if (latitude > 0 && longitude < 0)
+        else if (ilatitude > 0 && ilongitude < 0)
             prefix = "@";
-        else if (latitude < 0 && longitude > 0)
+        else if (ilatitude < 0 && ilongitude > 0)
             prefix = "#";
-        else if (latitude < 0 && longitude < 0)
+        else if (ilatitude < 0 && ilongitude < 0)
             prefix = "$";
 
-        latitude = abs(latitude);
-        longitude = abs(longitude);
+        ilatitude = abs(ilatitude);
+        ilongitude = abs(ilongitude);
 
         // if (latitude < 0)
         //     location += "^";
         // else
         //     location += "~";
 
-        if (latitude < 10)
+        if (ilatitude < 10)
         {
-            location += "0" + String(latitude);
+            location += "0" + String(ilatitude);
         }
         else
         {
-            location += String(latitude);
+            location += String(ilatitude);
         }
 
         // if (longitude < 0)
@@ -114,17 +116,17 @@ namespace Historical_location
         // else
         //     location += "~";
 
-        if (longitude < 10)
+        if (ilongitude < 10)
         {
-            location += "00" + String(longitude);
+            location += "00" + String(ilongitude);
         }
-        else if (longitude < 100)
+        else if (ilongitude < 100)
         {
-            location += "0" + String(longitude);
+            location += "0" + String(ilongitude);
         }
         else
         {
-            location += String(longitude);
+            location += String(ilongitude);
         }
 
         return prefix + location;
@@ -134,7 +136,7 @@ namespace Historical_location
     {
         uint32_t lastTx = millis() - lastHistoricalLocationsTx;
 
-#ifdef DEBUG
+#ifdef CONFIG_DEBUG_ENABLE
         if (lastHistoricalLocationsTx == 0 || lastTx >= 1 * 60 * 1000) // 1.5 min
 #else
         if (lastHistoricalLocationsTx == 0 || lastTx >= 10 * 60 * 1000)
@@ -271,30 +273,27 @@ namespace Historical_location
                 return false;
             }
 
-            if (Config.beacon.sendViaRF)
+            switch (historicalLocationsFrequency)
             {
-                switch (historicalLocationsFrequency)
-                {
-                case 0:
-                    Utils::println("-- Sending Historical Locations [434.855] --");
+            case 0:
+                Utils::println("-- Sending Historical Locations [434.855] --");
 
-                    LoRa_Utils::changeFreq(434.855, "1200");
-                    break;
-                case 1:
-                    Utils::println("-- Sending Historical Locations [433.775] --");
+                LoRa_Utils::changeFreq(434.855, "1200");
+                break;
+            case 1:
+                Utils::println("-- Sending Historical Locations [433.775] --");
 
-                    LoRa_Utils::changeFreq(433.775, "300");
-                    break;
-                case 2:
-                    Utils::println("-- Sending Historical Locations [439.9125] --");
+                LoRa_Utils::changeFreq(433.775, "300");
+                break;
+            case 2:
+                Utils::println("-- Sending Historical Locations [439.9125] --");
 
-                    LoRa_Utils::changeFreq(439.9125, "300");
-                    break;
-                }
-
-                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1,WIDE1*::SR2CPA-11:" + message);
-                LoRa_Utils::changeToRX();
+                LoRa_Utils::changeFreq(439.9125, "300");
+                break;
             }
+
+            LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLRG1,WIDE1*::SR2CPA-11:" + message);
+            LoRa_Utils::changeToRX();
 
             lastHistoricalLocationsTx = millis();
             historicalLocationsFrequency++;
@@ -315,8 +314,8 @@ namespace Historical_location
 
         lastHistoricalLocations += location;
 
-        lastHistoricalLatitude = int(Config.beacon.latitude);
-        lastHistoricalLongitude = int(Config.beacon.longitude);
+        lastHistoricalLatitude = int(latitude);
+        lastHistoricalLongitude = int(longitude);
 
         Utils::println("Inserted new day separator and first location for historical location");
 
@@ -352,8 +351,8 @@ namespace Historical_location
 
     void process(String location)
     {
-        int diffLatitude = lastHistoricalLatitude - int(Config.beacon.latitude);
-        int diffLongitude = lastHistoricalLongitude - int(Config.beacon.longitude);
+        int diffLatitude = lastHistoricalLatitude - int(latitude);
+        int diffLongitude = lastHistoricalLongitude - int(longitude);
 
         // if (abs(diffLatitude) <= 2 && abs(diffLongitude) <= 2)
         if (abs(diffLatitude) <= 1 && abs(diffLongitude) <= 1)
@@ -392,8 +391,8 @@ namespace Historical_location
             //         makeDiffAndInsert(0, diffLongitude, location);
             //     }
 
-            //     lastHistoricalLatitude = int(Config.beacon.latitude);
-            //     lastHistoricalLongitude = int(Config.beacon.longitude);
+            //     lastHistoricalLatitude = int(latitude);
+            //     lastHistoricalLongitude = int(longitude);
 
             //     Utils::print("Current historical locations: ");
             //     Utils::println(lastHistoricalLocations);
@@ -410,8 +409,8 @@ namespace Historical_location
 
             makeDiffAndInsert(diffLatitude, diffLongitude, location);
 
-            lastHistoricalLatitude = int(Config.beacon.latitude);
-            lastHistoricalLongitude = int(Config.beacon.longitude);
+            lastHistoricalLatitude = int(latitude);
+            lastHistoricalLongitude = int(longitude);
 
             Utils::print("Current historical locations: ");
             Utils::println(lastHistoricalLocations);
@@ -421,8 +420,8 @@ namespace Historical_location
             Utils::print("Got too fast location change: ");
             Utils::println(String(diffLatitude) + " " + String(diffLongitude));
 
-            lastHistoricalLatitude = int(Config.beacon.latitude);
-            lastHistoricalLongitude = int(Config.beacon.longitude);
+            lastHistoricalLatitude = int(latitude);
+            lastHistoricalLongitude = int(longitude);
         }
     }
 }

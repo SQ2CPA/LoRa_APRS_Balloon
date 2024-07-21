@@ -1,12 +1,7 @@
 #include <RadioLib.h>
-#include <WiFi.h>
 #include "configuration.h"
 #include "pins_config.h"
 #include "utils.h"
-
-extern Configuration Config;
-
-extern std::vector<ReceivedPacket> receivedPackets;
 
 bool transmissionFlag = true;
 bool ignorePacket = false;
@@ -38,7 +33,7 @@ namespace LoRa_Utils
     void setup()
     {
         SPI.begin(RADIO_SCLK_PIN, RADIO_MISO_PIN, RADIO_MOSI_PIN);
-        int state = radio.begin(Config.loramodule.rxFreq);
+        int state = radio.begin(CONFIG_LORA_RX_FREQ);
         if (state == RADIOLIB_ERR_NONE)
         {
             Utils::println("Initializing LoRa Module");
@@ -63,7 +58,7 @@ namespace LoRa_Utils
         }
 #endif
 
-        if (Config.loramodule.rxSpeed == "300")
+        if (strcmp(CONFIG_LORA_RX_SPEED, "300"))
         {
             radio.setSpreadingFactor(9);
             radio.setCodingRate(7);
@@ -107,7 +102,7 @@ namespace LoRa_Utils
 
     void changeToRX()
     {
-        if (Config.loramodule.rxSpeed == "300")
+        if (strcmp(CONFIG_LORA_RX_SPEED, "300"))
         {
             radio.setSpreadingFactor(12);
             radio.setCodingRate(5);
@@ -120,7 +115,7 @@ namespace LoRa_Utils
             radio.setBandwidth(125);
         }
 
-        radio.setFrequency(Config.loramodule.rxFreq);
+        radio.setFrequency(CONFIG_LORA_RX_FREQ);
     }
 
     void changeFreq(float freq, String speed)
@@ -151,8 +146,9 @@ namespace LoRa_Utils
 
     void sendNewPacket(uint8_t *newPacket, int size)
     {
-        if (!Config.loramodule.txActive)
-            return;
+#ifndef CONFIG_LORA_TX_ACTIVE
+        return;
+#endif
 
 #ifdef HAS_INTERNAL_LED
         digitalWrite(internalLedPin, HIGH);
@@ -190,8 +186,9 @@ namespace LoRa_Utils
 
     void sendNewPacket(const String &newPacket)
     {
-        if (!Config.loramodule.txActive)
-            return;
+#ifndef CONFIG_LORA_TX_ACTIVE
+        return;
+#endif
 
 #ifdef HAS_INTERNAL_LED
         digitalWrite(internalLedPin, HIGH);
@@ -270,22 +267,6 @@ namespace LoRa_Utils
                     freqError = radio.getFrequencyError();
                     Utils::println("<--- LoRa Packet Rx    : " + loraPacket);
                     Utils::println("(RSSI:" + String(rssi) + " / SNR:" + String(snr) + " / FreqErr:" + String(freqError) + ")");
-
-                    if (!false)
-                    {
-                        ReceivedPacket receivedPacket;
-                        receivedPacket.millis = millis();
-                        receivedPacket.packet = loraPacket.substring(3);
-                        receivedPacket.RSSI = rssi;
-                        receivedPacket.SNR = snr;
-
-                        if (receivedPackets.size() >= 20)
-                        {
-                            receivedPackets.erase(receivedPackets.begin());
-                        }
-
-                        receivedPackets.push_back(receivedPacket);
-                    }
 
                     return loraPacket;
                 }

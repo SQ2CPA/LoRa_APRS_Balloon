@@ -1,7 +1,8 @@
 #include "configuration.h"
 #include "query_utils.h"
 
-extern Configuration Config;
+extern double latitude;
+extern double longitude;
 
 namespace QUERY_Utils
 {
@@ -26,16 +27,16 @@ namespace QUERY_Utils
         }
         else if (query == "?APRSP")
         {
-            answer = "Location: " + String(Config.beacon.latitude, 2) + " " + String(Config.beacon.longitude, 2);
+            answer = "Location: " + String(latitude, 2) + " " + String(longitude, 2);
         }
 
-        if (Config.beacon.path == "")
+        if (strcmp(CONFIG_APRS_PATH, ""))
         {
-            return Config.callsign + ">APLRG1,RFONLY::" + sender + ":" + answer;
+            return String(CONFIG_APRS_CALLSIGN) + ">APLRG1,RFONLY::" + sender + ":" + answer;
         }
         else
         {
-            return Config.callsign + ">APLRG1," + Config.beacon.path + "::" + sender + ":" + answer;
+            return String(CONFIG_APRS_CALLSIGN) + ">APLRG1," + String(CONFIG_APRS_PATH) + "::" + sender + ":" + answer;
         }
     }
 

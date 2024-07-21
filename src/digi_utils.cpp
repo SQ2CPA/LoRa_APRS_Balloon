@@ -1,13 +1,9 @@
-#include <WiFi.h>
 #include "configuration.h"
 #include "query_utils.h"
 #include "lora_utils.h"
 #include "digi_utils.h"
-#include "wifi_utils.h"
 #include "gps_utils.h"
 #include "utils.h"
-
-extern Configuration Config;
 
 namespace DIGI_Utils
 {
@@ -72,13 +68,13 @@ namespace DIGI_Utils
             }
 
             LoRa_Utils::changeFreq(434.855, "1200");
-            if (Config.beacon.path == "")
+            if (strcmp(CONFIG_APRS_PATH, ""))
             {
-                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1,RFONLY::" + sender + ":" + ackMessage);
+                LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLRG1,RFONLY::" + sender + ":" + ackMessage);
             }
             else
             {
-                LoRa_Utils::sendNewPacket(Config.callsign + ">APLRG1," + Config.beacon.path + "::" + sender + ":" + ackMessage);
+                LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLRG1," + String(CONFIG_APRS_PATH) + "::" + sender + ":" + ackMessage);
             }
             LoRa_Utils::changeToRX();
 
@@ -108,18 +104,18 @@ namespace DIGI_Utils
             if ((packet.substring(0, 3) == "\x3c\xff\x01") && (packet.indexOf("NOGATE") == -1))
             {
                 Sender = packet.substring(3, packet.indexOf(">"));
-                if (Sender != Config.callsign)
+                if (Sender != CONFIG_APRS_CALLSIGN)
                 {
                     AddresseeAndMessage = packet.substring(packet.indexOf("::") + 2);
                     Addressee = AddresseeAndMessage.substring(0, AddresseeAndMessage.indexOf(":"));
                     Addressee.trim();
-                    if (packet.indexOf("::") > 10 && Addressee == Config.callsign)
+                    if (packet.indexOf("::") > 10 && Addressee == CONFIG_APRS_CALLSIGN)
                     { // its a message for me!
                         processReceivedLoRaMessage(Sender, AddresseeAndMessage);
                     }
-                    else if (packet.indexOf("SKY1-") > 10 && Config.digi.mode == 2)
+                    else if (packet.indexOf("SKY1-") > 10 && CONFIG_APRS_DIGI_MODE == 2)
                     { // If should repeat packet (SKY1 Digi)
-                        loraPacket = generateDigiRepeatedPacket(packet.substring(3), Config.callsign);
+                        loraPacket = generateDigiRepeatedPacket(packet.substring(3), CONFIG_APRS_CALLSIGN);
                         if (loraPacket != "")
                         {
                             delay(500);
