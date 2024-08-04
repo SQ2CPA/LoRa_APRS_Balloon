@@ -59,12 +59,12 @@ namespace Utils
 
                 LoRa_Utils::changeFreq(434.855, "1200");
                 break;
-            case 2:
+            case 0:
                 Utils::println("-- Sending Beacon [433.775] --");
 
                 LoRa_Utils::changeFreq(433.775, "300");
                 break;
-            case 0:
+            case 2:
                 Utils::println("-- Sending Beacon [439.9125] --");
 
                 LoRa_Utils::changeFreq(439.9125, "300");

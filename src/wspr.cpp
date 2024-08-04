@@ -251,12 +251,12 @@ namespace WSPR_Utils
         uint8_t Length = strlen(call);
         strcpy(CallWithSuPrefix, call);
 
-#ifdef CONFIG_WSPR_SSID
-        if (CONFIG_WSPR_SSID > 0)
+#ifdef CONFIG_WSPR_SUFFIX
+        if (CONFIG_WSPR_SUFFIX > 0)
         {
             CallWithSuPrefix[Length] = '/';
 
-            CallWithSuPrefix[Length + 1] = '0' + CONFIG_WSPR_SSID;
+            CallWithSuPrefix[Length + 1] = '0' + CONFIG_WSPR_SUFFIX;
             CallWithSuPrefix[Length + 2] = 0;
         }
 #endif
@@ -376,7 +376,7 @@ namespace WSPR_Utils
             n = n * 27 + (wspr_code(callsign[4]) - 10);
             n = n * 27 + (wspr_code(callsign[5]) - 10);
 
-            m = (27232 + CONFIG_WSPR_SSID);
+            m = (27232 + CONFIG_WSPR_SUFFIX);
             m = (m * 128) + power + 2 + 64;
             break;
         default:
@@ -605,7 +605,7 @@ namespace WSPR_Utils
 
         uint64_t freq1 = freq + (100ULL * random(-100, 100));
 
-        if (CONFIG_WSPR_SSID > 0)
+        if (CONFIG_WSPR_SUFFIX > 0)
             wspr_encode(power1, 2);
         else
             wspr_encode(power1, 1);
@@ -647,6 +647,25 @@ namespace WSPR_Utils
         while (1)
         {
         }
+    }
+
+    void startupTone()
+    {
+        uint64_t freq = 14402500000ULL;
+
+        for (int i = 0; i < 50; i++)
+        {
+            setFrequency(freq + (100ULL * (i * 50)));
+            delay(20);
+        }
+
+        setFrequency(WSPR_FREQ20m);
+
+        delay(250);
+
+        disableTX();
+
+        delay(250);
     }
 
 }

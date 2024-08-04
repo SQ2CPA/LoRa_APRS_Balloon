@@ -64,4 +64,5 @@ namespace WSPR_Utils
     void disableTX();
     void debug();
     bool isAvailable();
+    void startupTone();
 }

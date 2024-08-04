@@ -16,11 +16,7 @@
 #include "current_day.h"
 #include <Preferences.h>
 
-#ifdef CONFIG_WSPR_ENABLE
-SoftwareSerial gpsPort(1, 0); // reversed
-#else
-SoftwareSerial gpsPort(0, 1); // normal
-#endif
+SoftwareSerial gpsPort(0, 1); // normal GPS TX at GPIO0, GPS RX at GPIO1
 
 TinyGPSPlus gps;
 SFE_UBLOX_GPS sgps;
@@ -49,6 +45,8 @@ int currentDay = -1;
 bool canUseStorage = false;
 
 Preferences preferences;
+
+int restartReason = -1;
 
 void setup()
 {
@@ -123,6 +121,10 @@ void setup()
         WSPR_Utils::disableTX();
 
         // WSPR_Utils::debug();
+
+#ifdef CONFIG_STARTUP_TONE_ENABLE
+    WSPR_Utils::startupTone();
+#endif
 #endif
 
     if (preferences.begin("my-app", false))
@@ -134,6 +136,8 @@ void setup()
     {
         Serial.println("Preferences mount failed!!");
     }
+
+    restartReason = esp_reset_reason();
 }
 
 int rxPackets = 0;
@@ -183,6 +187,9 @@ void loop()
         comment += "D" + String(currentDay);
 
     comment += "N" + String(CONFIG_APRS_FLIGHT_ID);
+    comment += "Q" + String(restartReason);
+
+    comment += " ";
 
     if (WSPR_Utils::isAvailable())
         comment += "W";
@@ -269,7 +276,7 @@ void loop()
 
         okFrames++;
 
-        if (okFrames >= 3 && outputPower < 20)
+        if (okFrames >= 6 && outputPower < 20)
         {
             okFrames = 0;
             outputPower++;
