@@ -265,7 +265,7 @@ void loop()
 
     if (Utils::checkBeaconInterval())
     {
-        if (!gps.location.isValid())
+        if (!gps.location.isValid() || gps.satellites.value() == 0)
         {
             gpsFails++;
         }
