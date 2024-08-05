@@ -580,17 +580,25 @@ namespace WSPR_Utils
 
         String band = "";
 
+        // 08 20m MAIN
+        // 18 15m TEST
+        // 28 20m MAIN
+        // 38 17m TEST
+        // 48 20m MAIN
+
         switch (minute)
         {
         case 8:
+        case 28:
+        case 48:
             freq = WSPR_FREQ20m;
             band = "20m";
             break;
-        case 28:
-            freq = WSPR_FREQ30m;
-            band = "30m";
+        case 38:
+            freq = WSPR_FREQ17m;
+            band = "17m";
             break;
-        case 48:
+        case 18:
             freq = WSPR_FREQ15m;
             band = "15m";
             break;
@@ -629,7 +637,7 @@ namespace WSPR_Utils
 
         minute++;
 
-        if (minute == 8 || minute == 28 || minute == 48)
+        if (minute == 8 || minute == 18 || minute == 28 || minute == 38 || minute == 48)
         {
             if (second > 30)
             {
