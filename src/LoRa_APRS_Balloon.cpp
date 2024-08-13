@@ -265,7 +265,7 @@ void loop()
 
     if (Utils::checkBeaconInterval())
     {
-        if (!gps.location.isValid() || gps.satellites.value() == 0)
+        if (!gps.location.isValid()) // || gps.satellites.value() == 0
         {
             gpsFails++;
         }
@@ -319,7 +319,7 @@ void loop()
 #endif
 
 #ifdef CONFIG_CURRENT_DAY_ENABLE
-    if (beaconNum > 50 && altitudeInMeters > 2000 && canUseStorage)
+    if (beaconNum > 100 && altitudeInMeters > 2000 && canUseStorage)
     {
         Current_Day::read();
 
@@ -330,7 +330,7 @@ void loop()
 #endif
 
 #ifdef CONFIG_HISTORICAL_LOCATION_ENABLE
-    if (beaconNum > 50 && altitudeInMeters > 2000 && canUseStorage)
+    if (beaconNum > 100 && altitudeInMeters > 2000 && canUseStorage)
     {
         if (!readHistoricalLocations)
         {
@@ -377,7 +377,7 @@ void loop()
         int second = gps.time.second();
         int centisecond = gps.time.centisecond();
 
-        if (gps.time.isValid() && latitude != 0 && longitude != 0 && second != 0 && minute != 0 && gps.time.hour() != 0)
+        if (gps.time.isValid() && second != 0 && minute != 0 && gps.time.hour() != 0)
         {
             if (WSPR_Utils::isInTimeslot(minute, second))
             {

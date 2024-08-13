@@ -576,36 +576,20 @@ namespace WSPR_Utils
 
         disableTX();
 
-        uint64_t freq = 0;
+        // default freq
+        uint64_t freq = WSPR_FREQ20m;
+        String band = "20m";
 
-        String band = "";
-
-        // 08 20m MAIN
-        // 18 15m TEST
-        // 28 20m MAIN
-        // 38 17m TEST
-        // 48 20m MAIN
-
-        switch (minute)
+        switch (minute) // freq change by minute
         {
-        case 8:
-        case 28:
-        case 48:
-            freq = WSPR_FREQ20m;
-            band = "20m";
-            break;
-        case 38:
-            freq = WSPR_FREQ17m;
-            band = "17m";
-            break;
-        case 18:
-            freq = WSPR_FREQ15m;
-            band = "15m";
-            break;
-        default:
-            freq = WSPR_FREQ20m;
-            band = "20m";
-            break;
+            // case 38:
+            //     freq = WSPR_FREQ17m;
+            //     band = "17m";
+            //     break;
+            // case 18:
+            //     freq = WSPR_FREQ15m;
+            //     band = "15m";
+            //     break;
         }
 
         Utils::print("WSPR band for TX: ");
