@@ -15,6 +15,8 @@
 #include "debug.h"
 #include "current_day.h"
 #include <Preferences.h>
+#include "esp_system.h"
+#include "esp32/clk.h"
 
 SoftwareSerial gpsPort(0, 1); // normal GPS TX at GPIO0, GPS RX at GPIO1
 
@@ -50,6 +52,8 @@ int restartReason = -1;
 
 void setup()
 {
+    setCpuFrequencyMhz(40);
+
     Serial.begin(115200);
 
     gpsPort.begin(9600);
@@ -64,6 +68,10 @@ void setup()
     delay(1000);
 
     LoRa_Utils::setup();
+
+    Serial.println("Speed");
+    Serial.println(esp_clk_cpu_freq());
+    Serial.println(esp_clk_apb_freq());
 
     Serial.print("Brownout: ");
     Serial.print(CONFIG_ESP32C3_BROWNOUT_DET);
