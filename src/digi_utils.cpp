@@ -70,11 +70,11 @@ namespace DIGI_Utils
             LoRa_Utils::changeFreq(434.855, "1200");
             if (strcmp(CONFIG_APRS_PATH, ""))
             {
-                LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLRG1,RFONLY::" + sender + ":" + ackMessage);
+                LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLFLY,RFONLY::" + sender + ":" + ackMessage);
             }
             else
             {
-                LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLRG1," + String(CONFIG_APRS_PATH) + "::" + sender + ":" + ackMessage);
+                LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLFLY," + String(CONFIG_APRS_PATH) + "::" + sender + ":" + ackMessage);
             }
             LoRa_Utils::changeToRX();
 

@@ -26,7 +26,7 @@ namespace Utils
         if (e != "")
             e = "," + e;
 
-        String packet = String(CONFIG_APRS_CALLSIGN) + ">APLRG1" + e;
+        String packet = String(CONFIG_APRS_CALLSIGN) + ">APLFLY" + e;
 
         if (statusAfterBoot)
         {

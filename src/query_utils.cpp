@@ -32,11 +32,11 @@ namespace QUERY_Utils
 
         if (strcmp(CONFIG_APRS_PATH, ""))
         {
-            return String(CONFIG_APRS_CALLSIGN) + ">APLRG1,RFONLY::" + sender + ":" + answer;
+            return String(CONFIG_APRS_CALLSIGN) + ">APLFLY,RFONLY::" + sender + ":" + answer;
         }
         else
         {
-            return String(CONFIG_APRS_CALLSIGN) + ">APLRG1," + String(CONFIG_APRS_PATH) + "::" + sender + ":" + answer;
+            return String(CONFIG_APRS_CALLSIGN) + ">APLFLY," + String(CONFIG_APRS_PATH) + "::" + sender + ":" + answer;
         }
     }
 

@@ -166,7 +166,7 @@ namespace GPS_Utils
         while (taltitude.length() < 6)
             taltitude = "0" + taltitude;
 
-        String beaconPacket = String(CONFIG_APRS_CALLSIGN) + ">APLRG1";
+        String beaconPacket = String(CONFIG_APRS_CALLSIGN) + ">APLFLY";
 
         if (!strcmp(CONFIG_APRS_PATH, ""))
         {

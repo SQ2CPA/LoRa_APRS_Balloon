@@ -17,6 +17,7 @@
 #include <Preferences.h>
 #include "esp_system.h"
 #include "esp32/clk.h"
+#include <WiFi.h>
 
 SoftwareSerial gpsPort(0, 1); // normal GPS TX at GPIO0, GPS RX at GPIO1
 
@@ -52,6 +53,9 @@ int restartReason = -1;
 
 void setup()
 {
+    WiFi.mode(WIFI_OFF);
+    btStop();
+
     setCpuFrequencyMhz(40);
 
     Serial.begin(115200);

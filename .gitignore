@@ -6,3 +6,4 @@
 .DS_Store
 /data_embed/*.gz
 **/__pycache__/
+tmp

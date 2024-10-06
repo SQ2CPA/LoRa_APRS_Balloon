@@ -81,11 +81,6 @@ namespace Historical_location
         ilatitude = abs(ilatitude);
         ilongitude = abs(ilongitude);
 
-        // if (latitude < 0)
-        //     location += "^";
-        // else
-        //     location += "~";
-
         if (ilatitude < 10)
         {
             location += "0" + String(ilatitude);
@@ -94,11 +89,6 @@ namespace Historical_location
         {
             location += String(ilatitude);
         }
-
-        // if (longitude < 0)
-        //     location += "^";
-        // else
-        //     location += "~";
 
         if (ilongitude < 10)
         {
@@ -140,15 +130,6 @@ namespace Historical_location
                 }
                 else
                 {
-                    // if ((historicalLocations.charAt(0) == '+' || historicalLocations.charAt(0) == '-') && (historicalLocations.charAt(4) == '+' || historicalLocations.charAt(4) == '-'))
-                    // {
-                    //     mode = 1;
-                    // }
-                    // else
-                    // {
-                    //     mode = 2;
-                    // }
-
                     String x = historicalLocations.substring(2, 4);
 
                     if (x.indexOf("+") != -1 || x.indexOf("-") != -1 || x.indexOf("00") != -1)
@@ -246,9 +227,10 @@ namespace Historical_location
 
             if (message.length() > 220)
             {
-                int i = lastHistoricalLocations.indexOf(" ");
+                int i = lastHistoricalLocations.indexOf(";");
 
                 lastHistoricalLocations = lastHistoricalLocations.substring(i + 1);
+                write(lastHistoricalLocations);
 
                 Utils::println("-- Removed oldest day from historical locations --");
 
@@ -274,7 +256,7 @@ namespace Historical_location
                 break;
             }
 
-            LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLRG1,WIDE1*::SR2CPA-11:" + message);
+            LoRa_Utils::sendNewPacket(String(CONFIG_APRS_CALLSIGN) + ">APLFLY,WIDE1*::SR2CPA-11:" + message);
             LoRa_Utils::changeToRX();
 
             lastHistoricalLocationsTx = millis();
@@ -317,7 +299,7 @@ namespace Historical_location
             lastHistoricalLocations += diffLatitudeS;
             lastHistoricalLocations += diffLongitudeS;
 
-            Historical_location::write(lastHistoricalLocations);
+            write(lastHistoricalLocations);
 
             Utils::print("Inserted new historical location: ");
             Utils::print(location);
@@ -336,59 +318,8 @@ namespace Historical_location
         int diffLatitude = lastHistoricalLatitude - int(latitude);
         int diffLongitude = lastHistoricalLongitude - int(longitude);
 
-        // if (abs(diffLatitude) <= 2 && abs(diffLongitude) <= 2)
         if (abs(diffLatitude) <= 1 && abs(diffLongitude) <= 1)
         {
-            // if (abs(diffLatitude) > 1 || abs(diffLongitude) > 1)
-            // {
-            //     Utils::println("Got >1 or >1 historical locations change");
-
-            //     bool doubleLatitude = abs(diffLatitude) > 1;
-            //     bool doubleLongitude = abs(diffLongitude) > 1;
-
-            //     if (doubleLatitude)
-            //     {
-            //         if (diffLatitude > 0)
-            //             diffLatitude--;
-            //         else
-            //             diffLatitude++;
-            //     }
-
-            //     if (doubleLongitude)
-            //     {
-            //         if (diffLongitude > 0)
-            //             diffLongitude--;
-            //         else
-            //             diffLongitude++;
-            //     }
-
-            //     makeDiffAndInsert(diffLatitude, diffLongitude, location);
-
-            //     if (doubleLatitude)
-            //     {
-            //         makeDiffAndInsert(diffLatitude, 0, location);
-            //     }
-            //     else
-            //     {
-            //         makeDiffAndInsert(0, diffLongitude, location);
-            //     }
-
-            //     lastHistoricalLatitude = int(latitude);
-            //     lastHistoricalLongitude = int(longitude);
-
-            //     Utils::print("Current historical locations: ");
-            //     Utils::println(lastHistoricalLocations);
-            // }
-            // else if (abs(diffLatitude) > 0 && abs(diffLongitude) > 0)
-            // {
-            //     Utils::println("Got >0 and >0 historical locations change");
-
-            //     makeDiffAndInsert(diffLatitude, diffLongitude, location);
-
-            //     Utils::print("Current historical locations: ");
-            //     Utils::println(lastHistoricalLocations);
-            // }
-
             makeDiffAndInsert(diffLatitude, diffLongitude, location);
 
             lastHistoricalLatitude = int(latitude);
