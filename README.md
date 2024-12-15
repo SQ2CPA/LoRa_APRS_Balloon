@@ -13,7 +13,14 @@ You don't need to `Upload Filesystem Image`, all configuration is filled within 
 
 -   `GPIO9` to VCC during flight, GND for programming.
 -   GPS TX at `GPIO0`, GPS RX at `GPIO1` (I prefer ATGM336H-5N31)
--   SI5351 at SCL `GPIO19` and SDA `GPIO18` (for WSPR)
+-   SI5351 at SCL `GPIO19` and SDA `GPIO18` (only for WSPR!)
+
+### Tips
+
+- Use external BOD 2.8-3V for ESP32 because of broken Internal BOD
+- `GPIO9` to GND for programming, to VCC during flight (more safety)
+- Use 3.3V LDO if voltage >3.5V due to HT-CT62 datasheet (more safety, I don't know what is the real good max. voltage)
+- You don't need external I2C pull-up resistors for WSPR
 
 Based on **Ricardo CA2RXU** LoRa software that is available [here](https://github.com/richonguzman/LoRa_APRS_iGate).
 
