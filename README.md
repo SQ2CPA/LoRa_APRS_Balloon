@@ -30,6 +30,4 @@ You don't need to `Upload Filesystem Image`, all configuration is filled within 
 - Use 3.3V LDO if voltage >3.5V due to HT-CT62 datasheet (more safety, I don't know what is the real good max. voltage)
 - You don't need external I2C pull-up resistors for WSPR
 
-Based on **Ricardo CA2RXU** LoRa software that is available [here](https://github.com/richonguzman/LoRa_APRS_iGate).
-
 # 73, Damian SQ2CPA, Poland
