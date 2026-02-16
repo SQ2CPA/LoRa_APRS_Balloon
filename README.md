@@ -14,8 +14,7 @@ You can also easily modify that for other LoRa modules like SX1278 or other ESP3
 
 ### Configuration
 
-All configuration is located in `./src/configuration.h`.
-You don't need to `Upload Filesystem Image`, all configuration is filled within code, not SPIFFS anymore!
+All configuration is located in `./src/configuration.h`
 
 ### Pinout
 
