@@ -22,7 +22,7 @@ bool isSIAvailable = false;
 
 int currentBand = 0;
 
-namespace WSPR_Utils
+namespace WSPR
 {
     void setup()
     {
@@ -36,7 +36,7 @@ namespace WSPR_Utils
             return;
         }
 
-        Serial.println("Si5351 not detected at adress 96");
+        Serial.println("[WSPR] Si5351 not detected at adress 96");
 
         address = 98;
 
@@ -47,7 +47,7 @@ namespace WSPR_Utils
             return;
         }
 
-        Serial.println("Si5351 not Detected at adress 98. There is no Si5351!");
+        Serial.println("[WSPR] Si5351 not Detected at adress 98. There is no Si5351!");
     }
 
     void setRegister(uint8_t reg, uint8_t data)
@@ -572,7 +572,7 @@ namespace WSPR_Utils
 
     void sendWSPR(int minute)
     {
-        Utils::println("---> WSPR TX START");
+        Utils::println("[WSPR] TX START");
 
         disableTX();
 
@@ -592,7 +592,7 @@ namespace WSPR_Utils
             //     break;
         }
 
-        Utils::print("WSPR band for TX: ");
+        Utils::print("[WSPR] WSPR band for TX: ");
         Utils::println(band);
 
         uint64_t freq1 = freq + (100ULL * random(-100, 100));
@@ -604,7 +604,7 @@ namespace WSPR_Utils
 
         TX(freq1);
 
-        Utils::println("First WSPR TX done, starting second one");
+        Utils::println("[WSPR] First TX done, starting second one");
 
         delay(9000);
 
@@ -612,7 +612,7 @@ namespace WSPR_Utils
         wspr_encode(power2, 3);
         TX(freq2);
 
-        Utils::println("---> WSPR TX DONE");
+        Utils::println("[WSPR] TX DONE");
     }
 
     bool isInTimeslot(int minute, int second)

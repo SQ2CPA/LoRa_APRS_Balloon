@@ -1,11 +1,11 @@
 #include "configuration.h"
 #include "pins_config.h"
-#include "lora_utils.h"
-#include "gps_utils.h"
+#include "radio.h"
+#include "gps.h"
 #include "utils.h"
 
-extern bool statusAfterBoot;
 extern uint32_t lastBeaconTx;
+extern uint32_t lastTestTx;
 extern bool beaconUpdate;
 extern String beaconPacket;
 extern String comment;
@@ -15,29 +15,64 @@ extern int freqError;
 extern String distance;
 extern int beaconNum;
 extern int beaconFrequency;
+extern String lastReceivedPacket;
+
+extern float lastSNR;
+extern int lastRSSI;
 
 namespace Utils
 {
-
-    void processStatus()
+    void sendStatus(String value)
     {
-        String e = CONFIG_APRS_PATH;
+        RADIO::changeFreq(434.855, "1200");
+        RADIO::sendPacket(String(CONFIG_APRS_CALLSIGN) + ">APLAIX:>" + value);
+        RADIO::changeFreq(433.775, "300");
+        RADIO::sendPacket(String(CONFIG_APRS_CALLSIGN) + ">APLAIX:>" + value);
 
-        if (e != "")
-            e = "," + e;
+        RADIO::changeToRX();
+    }
 
-        String packet = String(CONFIG_APRS_CALLSIGN) + ">APLFLY" + e;
+    String getSender(const String &rawPacket)
+    {
+        int colonBrace = rawPacket.indexOf(":}");
 
-        if (statusAfterBoot)
+        bool fromAPRSIS = colonBrace != -1 && rawPacket.indexOf("TCPIP") != -1;
+
+        if (fromAPRSIS)
         {
-            delay(2000);
+            int gtPos = rawPacket.indexOf('>', colonBrace + 2);
 
-            packet += ":>LoRa APRS RX " + String(CONFIG_LORA_RX_FREQ, 3) + " @1k2 SKY1-1 DIGI";
-            LoRa_Utils::changeFreq(434.855, "1200");
-            LoRa_Utils::sendNewPacket(packet);
-            LoRa_Utils::changeToRX();
+            if (gtPos != -1)
+            {
+                return rawPacket.substring(colonBrace + 2, gtPos);
+            }
 
-            statusAfterBoot = false;
+            return "";
+        }
+
+        int senderEnd = rawPacket.indexOf(">");
+        if (senderEnd == -1)
+            return "";
+
+        return rawPacket.substring(0, senderEnd);
+    }
+
+    void sendDebug(String value)
+    {
+        RADIO::changeFreq(434.855, "1200");
+        RADIO::sendPacket(String(CONFIG_APRS_CALLSIGN) + ">APLAIX::SR2CPA-11:" + String(lastRSSI) + "," + String(lastSNR, 1) + ":" + value);
+        RADIO::changeToRX();
+    }
+
+    void checkTestInterval()
+    {
+        uint32_t lastTx = millis() - lastTestTx;
+
+        if (lastTestTx == 0 || lastTx >= 4 * 60 * 1000)
+        {
+            sendDebug(lastReceivedPacket);
+
+            lastTestTx = millis();
         }
     }
 
@@ -45,37 +80,35 @@ namespace Utils
     {
         uint32_t lastTx = millis() - lastBeaconTx;
 
-        if (lastBeaconTx == 0 || lastTx >= 0.40 * 60 * 1000)
-        { // ~25s
-            beaconUpdate = true;
-        }
-
-        if (beaconUpdate)
+        if (lastBeaconTx == 0 || lastTx >= 60 * 1000)
         {
+            comment += " ";
+
+            comment += "RX=" + String(RADIO::getRSSI());
+
             switch (beaconFrequency)
             {
             case 1:
-                Utils::println("-- Sending Beacon [434.855] --");
+                Utils::println("[BEACON] Sending at 434.855");
 
-                LoRa_Utils::changeFreq(434.855, "1200");
+                RADIO::changeFreq(434.855, "1200");
                 break;
             case 0:
-                Utils::println("-- Sending Beacon [433.775] --");
+                Utils::println("[BEACON] Sending at 433.775");
 
-                LoRa_Utils::changeFreq(433.775, "300");
+                RADIO::changeFreq(433.775, "300");
                 break;
             case 2:
-                Utils::println("-- Sending Beacon [439.9125] --");
+                Utils::println("[BEACON] Sending at 439.9125");
 
-                LoRa_Utils::changeFreq(439.9125, "300");
+                RADIO::changeFreq(439.9125, "300");
                 break;
             }
 
-            LoRa_Utils::sendNewPacket(beaconPacket + comment);
-            LoRa_Utils::changeToRX();
+            RADIO::sendPacket(beaconPacket + comment);
+            RADIO::changeToRX();
 
             lastBeaconTx = millis();
-            beaconUpdate = false;
             beaconNum++;
             beaconFrequency++;
 
@@ -84,9 +117,6 @@ namespace Utils
 
             return true;
         }
-
-        if (statusAfterBoot)
-            processStatus();
 
         return false;
     }

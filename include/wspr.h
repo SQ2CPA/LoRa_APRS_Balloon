@@ -55,7 +55,7 @@
 
 #define rot(x, k) ((x << k) | (x >> (32 - k)))
 
-namespace WSPR_Utils
+namespace WSPR
 {
     void setup();
     void prepareWSPR(uint32_t altitude);

@@ -1,12 +1,26 @@
 #include <TinyGPS++.h>
 #include "configuration.h"
-#include "gps_utils.h"
+#include "gps.h"
 
 extern double latitude;
 extern double longitude;
 
-namespace GPS_Utils
+namespace GPS
 {
+    void setup()
+    {
+        pinMode(CONFIG_GPS_PIN_EN, OUTPUT);
+    }
+
+    void enableGPS()
+    {
+        digitalWrite(CONFIG_GPS_PIN_EN, HIGH);
+    }
+
+    void disableGPS()
+    {
+        digitalWrite(CONFIG_GPS_PIN_EN, LOW);
+    }
 
     char *ax25_base91enc(char *s, uint8_t n, uint32_t v)
     {
@@ -166,14 +180,9 @@ namespace GPS_Utils
         while (taltitude.length() < 6)
             taltitude = "0" + taltitude;
 
-        String beaconPacket = String(CONFIG_APRS_CALLSIGN) + ">APLFLY";
+        String beaconPacket = String(CONFIG_APRS_CALLSIGN) + ">APLAIX";
 
-        if (!strcmp(CONFIG_APRS_PATH, ""))
-        {
-            beaconPacket += "," + String(CONFIG_APRS_PATH);
-        }
-
-        return beaconPacket + ":!" + stationLatitude + CONFIG_APRS_OVERLAY + stationLongitude + CONFIG_APRS_SYMBOL + tdirection + "/" + tspeed + "/A=" + taltitude + "/";
+        return beaconPacket + ":=" + stationLatitude + "/" + stationLongitude + "O" + tdirection + "/" + tspeed + "/A=" + taltitude + "/";
     }
 
     double calculateDistanceTo(double toLatitude, double toLongitude)

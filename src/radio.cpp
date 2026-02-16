@@ -3,6 +3,12 @@
 #include "pins_config.h"
 #include "utils.h"
 
+extern int rxCRCPackets;
+extern String lastReceivedPacket;
+
+extern int lastRSSIv;
+extern float lastSNRv;
+
 bool transmissionFlag = true;
 bool ignorePacket = false;
 bool operationDone = true;
@@ -19,10 +25,7 @@ SX1268 radio = new Module(RADIO_CS_PIN, RADIO_DIO1_PIN, RADIO_RST_PIN, RADIO_BUS
 SX1278 radio = new Module(RADIO_CS_PIN, RADIO_BUSY_PIN, RADIO_RST_PIN);
 #endif
 
-int rssi, freqError;
-float snr;
-
-namespace LoRa_Utils
+namespace RADIO
 {
 
     void setFlag(void)
@@ -30,20 +33,60 @@ namespace LoRa_Utils
         operationDone = true;
     }
 
-    void setup()
+    void startupTone()
     {
-        SPI.begin(RADIO_SCLK_PIN, RADIO_MISO_PIN, RADIO_MOSI_PIN);
-        int state = radio.begin(CONFIG_LORA_RX_FREQ);
+        int state = radio.beginFSK(433.025);
         if (state == RADIOLIB_ERR_NONE)
         {
-            Utils::println("Initializing LoRa Module");
+            Utils::println("[RADIO] Initializing LoRa Module");
         }
         else
         {
-            Utils::println("Starting LoRa failed! Code: " + String(state));
+            Utils::println("[RADIO] Starting LoRa failed! Code: " + String(state));
             delay(60000);
             ESP.restart();
         }
+
+        for (int i = 0; i < 5; i++)
+        {
+            radio.transmit("HELLO FROM BALLOON www.SP0LND.pl");
+            delay(125);
+        }
+
+        radio.reset();
+    }
+
+    void changeToRX()
+    {
+        radio.setSpreadingFactor(12);
+        radio.setCodingRate(8);
+        radio.setBandwidth(125);
+
+        Serial.println("[RADIO] Change frequency to RX: " + String(CONFIG_LORA_RX_FREQ, 4) + " MHz SF12 CR4:8");
+
+        radio.setFrequency(CONFIG_LORA_RX_FREQ);
+    }
+
+    void setup()
+    {
+        SPI.begin(RADIO_SCLK_PIN, RADIO_MISO_PIN, RADIO_MOSI_PIN);
+
+#ifdef CONFIG_LORA_STARTUP_TONE_ENABLE
+        startupTone();
+#endif
+
+        int state = radio.begin(CONFIG_LORA_RX_FREQ);
+        if (state == RADIOLIB_ERR_NONE)
+        {
+            Utils::println("[RADIO] Initializing LoRa Module");
+        }
+        else
+        {
+            Utils::println("[RADIO] Starting LoRa failed! Code: " + String(state));
+            delay(60000);
+            ESP.restart();
+        }
+
 #ifdef HAS_SX127X
         radio.setDio0Action(setFlag, RISING);
 #endif
@@ -58,38 +101,19 @@ namespace LoRa_Utils
         }
 #endif
 
-        if (strcmp(CONFIG_LORA_RX_SPEED, "300"))
-        {
-            radio.setSpreadingFactor(9);
-            radio.setCodingRate(7);
-            radio.setBandwidth(125);
-        }
-        else
-        {
-            radio.setSpreadingFactor(12);
-            radio.setCodingRate(5);
-            radio.setBandwidth(125);
-        }
+        changeToRX();
+
         radio.setCRC(true);
 
-#if defined(RADIO_RXEN) && defined(RADIO_TXEN)
-        radio.setRfSwitchPins(RADIO_RXEN, RADIO_TXEN);
-#endif
-
-#if defined(HAS_SX126X) || ESP32C3_SX126X
-        state = radio.setOutputPower(15); // max value 20dB for 400M30S as it has Low Noise Amp
-#endif
-#if defined(HAS_SX127X) || ESP32_DIY_1W_LoRa
-        state = radio.setOutputPower(15); // max value 20dB for 400M30S as it has Low Noise Amp
-#endif
+        state = radio.setOutputPower(15);
 
         if (state == RADIOLIB_ERR_NONE)
         {
-            Utils::println("init : LoRa Module    ...     done!");
+            Utils::println("[RADIO] LoRa initialized");
         }
         else
         {
-            Utils::println("Starting LoRa failed!");
+            Utils::println("[RADIO] Starting LoRa failed!");
             delay(60000);
             ESP.restart();
         }
@@ -100,24 +124,6 @@ namespace LoRa_Utils
         radio.setOutputPower(power);
     }
 
-    void changeToRX()
-    {
-        if (strcmp(CONFIG_LORA_RX_SPEED, "300"))
-        {
-            radio.setSpreadingFactor(12);
-            radio.setCodingRate(5);
-            radio.setBandwidth(125);
-        }
-        else
-        {
-            radio.setSpreadingFactor(9);
-            radio.setCodingRate(7);
-            radio.setBandwidth(125);
-        }
-
-        radio.setFrequency(CONFIG_LORA_RX_FREQ);
-    }
-
     void changeFreq(float freq, String speed)
     {
         if (speed == "300")
@@ -125,12 +131,16 @@ namespace LoRa_Utils
             radio.setSpreadingFactor(12);
             radio.setCodingRate(5);
             radio.setBandwidth(125);
+
+            Serial.println("[RADIO] Change frequency to: " + String(freq, 4) + " MHz speed 300bps");
         }
         else
         {
             radio.setSpreadingFactor(9);
             radio.setCodingRate(7);
             radio.setBandwidth(125);
+
+            Serial.println("[RADIO] Change frequency to: " + String(freq, 4) + " MHz speed 1200bps");
         }
 
         radio.setFrequency(freq);
@@ -144,20 +154,13 @@ namespace LoRa_Utils
         radio.setFrequency(freq);
     }
 
-    void sendNewPacket(uint8_t *newPacket, int size)
+    void sendPacket(uint8_t *newPacket, int size)
     {
-#ifndef CONFIG_LORA_TX_ACTIVE
-        return;
-#endif
-
-#ifdef HAS_INTERNAL_LED
-        digitalWrite(internalLedPin, HIGH);
-#endif
         int state = radio.transmit(newPacket, size);
         transmissionFlag = true;
         if (state == RADIOLIB_ERR_NONE)
         {
-            Utils::print("---> LoRa Packet Bin Tx: ");
+            Utils::print("[RADIO] TX (bin): ");
             for (int i = 0; i < size; i++)
             {
                 Serial.write(newPacket[i]);
@@ -167,55 +170,44 @@ namespace LoRa_Utils
         }
         else if (state == RADIOLIB_ERR_PACKET_TOO_LONG)
         {
-            Utils::println(F("too long!"));
+            Utils::println(F("[RADIO] too long!"));
         }
         else if (state == RADIOLIB_ERR_TX_TIMEOUT)
         {
-            Utils::println(F("timeout!"));
+            Utils::println(F("[RADIO] timeout!"));
         }
         else
         {
-            Utils::print(F("failed, code "));
+            Utils::print(F("[RADIO] failed, code "));
             Utils::println(String(state));
         }
-#ifdef HAS_INTERNAL_LED
-        digitalWrite(internalLedPin, LOW);
-#endif
+
         // ignorePacket = true;
     }
 
-    void sendNewPacket(const String &newPacket)
+    void sendPacket(const String &newPacket)
     {
-#ifndef CONFIG_LORA_TX_ACTIVE
-        return;
-#endif
-
-#ifdef HAS_INTERNAL_LED
-        digitalWrite(internalLedPin, HIGH);
-#endif
         int state = radio.transmit("\x3c\xff\x01" + newPacket);
         transmissionFlag = true;
         if (state == RADIOLIB_ERR_NONE)
         {
-            Utils::print("---> LoRa Packet Tx    : ");
+            Utils::print("[RADIO] TX: ");
             Utils::println(newPacket);
         }
         else if (state == RADIOLIB_ERR_PACKET_TOO_LONG)
         {
-            Utils::println(F("too long!"));
+            Utils::println(F("[RADIO] too long!"));
         }
         else if (state == RADIOLIB_ERR_TX_TIMEOUT)
         {
-            Utils::println(F("timeout!"));
+            Utils::println(F("[RADIO] timeout!"));
         }
         else
         {
-            Utils::print(F("failed, code "));
+            Utils::print(F("[RADIO] failed, code "));
             Utils::println(String(state));
         }
-#ifdef HAS_INTERNAL_LED
-        digitalWrite(internalLedPin, LOW);
-#endif
+
         // ignorePacket = true;
     }
 
@@ -248,7 +240,7 @@ namespace LoRa_Utils
 
         operationDone = false;
 
-        String loraPacket = "";
+        String packet = "";
 
         if (transmissionFlag && !false)
         {
@@ -257,18 +249,20 @@ namespace LoRa_Utils
         }
         else
         {
-            int state = radio.readData(loraPacket);
+            int state = radio.readData(packet);
             if (state == RADIOLIB_ERR_NONE)
             {
-                if (loraPacket != "" && !ignorePacket)
+                if (packet != "" && !ignorePacket)
                 {
-                    rssi = radio.getRSSI();
-                    snr = radio.getSNR();
-                    freqError = radio.getFrequencyError();
-                    Utils::println("<--- LoRa Packet Rx    : " + loraPacket);
-                    Utils::println("(RSSI:" + String(rssi) + " / SNR:" + String(snr) + " / FreqErr:" + String(freqError) + ")");
+                    lastRSSIv = radio.getRSSI();
+                    lastSNRv = radio.getSNR();
 
-                    return loraPacket;
+                    int freqError = radio.getFrequencyError();
+
+                    Utils::println("[RADIO] RX: " + packet);
+                    Utils::println("[RADIO] RSSI:" + String(lastRSSIv) + " / SNR:" + String(lastSNRv) + " / FreqErr:" + String(freqError) + "");
+
+                    return packet.substring(3);
                 }
             }
             else if (state == RADIOLIB_ERR_RX_TIMEOUT)
@@ -277,24 +271,36 @@ namespace LoRa_Utils
             }
             else if (state == RADIOLIB_ERR_CRC_MISMATCH)
             {
-                Utils::println(F("CRC error!"));
-                loraPacket = "";
+                rxCRCPackets++;
+
+                lastReceivedPacket = "CRC:" + packet.substring(3);
+
+                lastRSSIv = radio.getRSSI();
+                lastSNRv = radio.getSNR();
+
+                Utils::println(F("[RADIO] CRC error!"));
+                packet = "";
             }
             else
             {
-                Utils::print(F("failed, code "));
+                Utils::print(F("[RADIO] failed, code "));
                 Utils::println(String(state));
             }
 
             if (ignorePacket)
             {
-                Utils::println("<--- LoRa Packet Rx    : " + loraPacket);
-                Utils::println("Received own packet. Ignoring");
+                Utils::println("[RADIO] LoRa Packet Rx: " + packet);
+                Utils::println("[RADIO] Received own packet. Ignoring");
 
                 ignorePacket = false;
                 return "";
             }
         }
-        return loraPacket;
+        return packet;
+    }
+
+    float getRSSI()
+    {
+        return radio.getRSSI(false);
     }
 }

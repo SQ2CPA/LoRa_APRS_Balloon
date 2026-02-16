@@ -1,8 +1,16 @@
-# SQ2CPA LoRa APRS Balloon (+WSPR)
+# SQ2CPA LoRa APRS Balloon (+WSPR!)
 
 ## Check my parts list [here](https://github.com/SQ2CPA/parts)
 
-This firmware is suitable for LoRa based balloon trackers. For now its good for **HT-CT62** board that includes **ESP32C3+SX1262**. It contains many good features like historical location, current flight day detection and even digipeater so you can repeat your messages via balloon via LoRa APRS!
+## This software is experimental!
+
+We are playing with Balloon as LoRa APRS Digipeater testing LoRa modulation parameters and other stuff!
+
+## Description
+
+This firmware is suitable for LoRa based balloon trackers. For now its good for **HT-CT62** board that includes **ESP32C3+SX1262**. It contains many good features like digipeater so you can repeat your messages via balloon via LoRa APRS!
+
+You can also easily modify that for other LoRa modules like SX1278 or other ESP32. This is not hard!
 
 ### Configuration
 
@@ -11,9 +19,9 @@ You don't need to `Upload Filesystem Image`, all configuration is filled within 
 
 ### Pinout
 
--   `GPIO9` to VCC during flight, GND for programming.
--   GPS TX at `GPIO0`, GPS RX at `GPIO1` (I prefer ATGM336H-5N31)
--   SI5351 at SCL `GPIO19` and SDA `GPIO18` (only for WSPR!)
+- `GPIO9` to VCC during flight, GND for programming.
+- GPS TX at `GPIO0`, GPS RX at `GPIO1` (I prefer ATGM336H-5N31)
+- SI5351 at SCL `GPIO19` and SDA `GPIO18` (only for WSPR!)
 
 ### Tips
 
